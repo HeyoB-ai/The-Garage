@@ -1,0 +1,6 @@
+{
+  "name": "The Garage Jávea",
+  "description": "Premium vehicle maintenance, turnkey Spanish import & export, and exclusive sales of select sports cars in Jávea. Calculate registration taxes instantly.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
