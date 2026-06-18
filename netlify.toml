@@ -13,10 +13,12 @@
 
 [functions]
   # Functions are PRE-BUNDLED to self-contained ESM by `npm run build:functions`
-  # (esbuild). We do NOT let Netlify's default bundler (nft) re-transpile our TS:
-  # nft mis-bundled the cms function (lost the default export -> "D.handler is not
-  # a function" 502s). Netlify just ships the generated netlify/functions/*.mjs.
-  # included_files supplies the content the function reads at runtime.
+  # (esbuild). node_bundler="none" makes Netlify ship those .mjs AS-IS — the
+  # default bundler (nft) mis-bundled the cms function (emitted src/data.ts and
+  # lost the default export -> "D.handler is not a function" 502s). Verified with
+  # zip-it-and-ship-it locally: nft -> default undefined; none -> default function.
+  node_bundler = "none"
+  # Content the function reads at runtime.
   included_files = ["content/**", "src/config/**", "src/data.ts"]
 
 # --- API routes → serverless functions (must come BEFORE the SPA fallback) ---
