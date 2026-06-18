@@ -540,7 +540,9 @@ export default function App() {
               <span>•</span>
               <a href="#calc-section" className="hover:text-amber-500">Import Calculator</a>
               <span>•</span>
-              <a href="#reviews-section" className="hover:text-amber-500">Testimonials</a>
+              <a href="/nieuws" className="hover:text-amber-500">Nieuws</a>
+              <span>•</span>
+              <a href="/beheer" className="hover:text-amber-500">Beheer</a>
             </div>
 
             <div>

@@ -36,6 +36,8 @@ export default function PageShell({ children }: { children: React.ReactNode }) {
             <span>•</span>
             <Link to="/nieuws" className="hover:text-amber-500">Nieuws</Link>
             <span>•</span>
+            <Link to="/beheer" className="hover:text-amber-500">Beheer</Link>
+            <span>•</span>
             <a href={`mailto:${siteConfig.contact.email}`} className="hover:text-amber-500">
               {siteConfig.contact.email}
             </a>
