@@ -46,20 +46,30 @@ export function getGitProvider(): GitProvider {
 
 export function getDeployProvider(): DeployProvider {
   // Resolve the Netlify subdomain from, in order: an explicit override, then
-  // Netlify's built-in vars (SITE_NAME / URL), which are injected automatically
-  // in every build and function context. So NETLIFY_SITE_NAME is now optional.
+  // Netlify's built-in vars (SITE_NAME / URL). Each value is normalised down to
+  // the bare subdomain, so a full URL pasted into NETLIFY_SITE_NAME still works.
   const site =
-    process.env.NETLIFY_SITE_NAME ||
-    process.env.SITE_NAME ||
+    normalizeSiteName(process.env.NETLIFY_SITE_NAME) ||
+    normalizeSiteName(process.env.SITE_NAME) ||
     siteNameFromUrl(process.env.URL);
   if (site) return new NetlifyProvider(site);
   return new MockDeployProvider();
 }
 
+// Reduce any value to a bare Netlify subdomain. "voicecms" stays "voicecms";
+// "https://voicecms.netlify.app/" and "voicecms.netlify.app" become "voicecms".
+function normalizeSiteName(value?: string): string | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  if (!v) return undefined;
+  if (!/[/.:]/.test(v)) return v; // already a bare subdomain
+  return siteNameFromUrl(v.includes("://") ? v : `https://${v}`);
+}
+
 // Pull the Netlify subdomain out of a full site URL, e.g.
 // "https://voicecms.netlify.app" -> "voicecms". Also handles the deploy-preview
 // form ("...--voicecms.netlify.app"). Returns undefined for a custom domain
-// (no ".netlify.app"), so the caller falls through to the mock.
+// (no ".netlify.app"), so the caller falls through.
 function siteNameFromUrl(url?: string): string | undefined {
   if (!url) return undefined;
   try {
