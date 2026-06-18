@@ -16,28 +16,45 @@ export function llmEnabled(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
+// Overridable without a code change (e.g. to dodge a transiently overloaded model).
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function generateJson(prompt: string, system: string): Promise<any | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
-  try {
-    const ai = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: { headers: { "User-Agent": "aistudio-build" } },
-    });
-    const res = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: { systemInstruction: system, responseMimeType: "application/json" },
-    });
-    const text = res.text;
-    if (!text) return null;
-    // Be tolerant of accidental code fences.
-    const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    return JSON.parse(cleaned);
-  } catch (err) {
-    console.error("LLM draft failed, falling back to placeholder:", err);
-    return null;
+  const ai = new GoogleGenAI({
+    apiKey: key,
+    httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+  });
+
+  // Retry transient errors (e.g. 503 "high demand"); fail safe to placeholders.
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await ai.models.generateContent({
+        model: MODEL,
+        contents: prompt,
+        config: { systemInstruction: system, responseMimeType: "application/json" },
+      });
+      const text = res.text;
+      if (!text) return null;
+      // Be tolerant of accidental code fences.
+      const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      return JSON.parse(cleaned);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const transient = /503|UNAVAILABLE|high demand|overloaded|429|rate/i.test(msg);
+      if (attempt < maxAttempts && transient) {
+        await sleep(700 * attempt);
+        continue;
+      }
+      console.error(`LLM draft failed (attempt ${attempt}), using placeholder:`, msg);
+      return null;
+    }
   }
+  return null;
 }
 
 const BRAND =
