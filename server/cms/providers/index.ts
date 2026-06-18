@@ -8,7 +8,9 @@
  *
  * Env:
  *   GITHUB_TOKEN, GITHUB_REPO ("owner/name"), GITHUB_DEFAULT_BRANCH (opt, "main")
- *   NETLIFY_SITE_NAME (the Netlify subdomain)
+ *   NETLIFY_SITE_NAME (optional): the Netlify subdomain. Now falls back to
+ *     Netlify's built-in SITE_NAME / URL vars, which are injected automatically
+ *     in every build and function context — so it usually needs no manual setup.
  */
 import { GitHubProvider } from "./github";
 import { NetlifyProvider } from "./netlify";
@@ -43,7 +45,29 @@ export function getGitProvider(): GitProvider {
 }
 
 export function getDeployProvider(): DeployProvider {
-  const site = process.env.NETLIFY_SITE_NAME;
+  // Resolve the Netlify subdomain from, in order: an explicit override, then
+  // Netlify's built-in vars (SITE_NAME / URL), which are injected automatically
+  // in every build and function context. So NETLIFY_SITE_NAME is now optional.
+  const site =
+    process.env.NETLIFY_SITE_NAME ||
+    process.env.SITE_NAME ||
+    siteNameFromUrl(process.env.URL);
   if (site) return new NetlifyProvider(site);
   return new MockDeployProvider();
+}
+
+// Pull the Netlify subdomain out of a full site URL, e.g.
+// "https://voicecms.netlify.app" -> "voicecms". Also handles the deploy-preview
+// form ("...--voicecms.netlify.app"). Returns undefined for a custom domain
+// (no ".netlify.app"), so the caller falls through to the mock.
+function siteNameFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  try {
+    const host = new URL(url).hostname;
+    if (!host.endsWith(".netlify.app")) return undefined;
+    const sub = host.slice(0, -".netlify.app".length);
+    return sub.includes("--") ? sub.split("--").pop() : sub;
+  } catch {
+    return undefined;
+  }
 }
