@@ -34,6 +34,8 @@ export interface TransitionContext {
   // Optional injected results from real providers (GitHub / Netlify).
   branchName?: string;
   previewUrl?: string;
+  // Files actually written to disk by the server executor, for an honest log.
+  appliedFiles?: string[];
 }
 
 export function createCommand(
@@ -105,7 +107,11 @@ export function applyAction(
       const previewUrl =
         ctx.previewUrl ??
         `https://deploy-preview-${rid(4)}--the-garage.netlify.app`;
-      let logs = withLog(cmd, logEntry("apply", `Committed changes to branch ${branchName}.`));
+      const applyMsg =
+        ctx.appliedFiles && ctx.appliedFiles.length > 0
+          ? `Wrote ${ctx.appliedFiles.length} file(s) on branch ${branchName}: ${ctx.appliedFiles.join(", ")}.`
+          : `Committed changes to branch ${branchName}.`;
+      let logs = withLog(cmd, logEntry("apply", applyMsg));
       logs = [...logs, logEntry("build", "typecheck + build passed.")];
       logs = [...logs, logEntry("preview", `Netlify preview ready at ${previewUrl}.`)];
       return { ...cmd, branchName, previewUrl, status: "preview_ready", logs };

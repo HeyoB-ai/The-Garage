@@ -30,6 +30,9 @@ export interface PlannedFileChange {
   path: string;
   action: "create" | "update" | "delete";
   description: string;
+  // Generated file contents, when the planner can already produce them (e.g.
+  // a news article). Present ⇒ the server executor will write exactly this.
+  preview?: string;
 }
 
 export interface ChangePlan {

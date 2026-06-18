@@ -24,6 +24,7 @@ import {
   TransitionError,
 } from "../../src/lib/cms/machine";
 import { store } from "./store";
+import { writePlanFiles } from "./executor";
 
 export const cmsRouter = Router();
 
@@ -47,7 +48,11 @@ for (const action of ACTIONS) {
       return res.status(404).json({ error: "Command not found." });
     }
     try {
-      const next = applyAction(current, action);
+      // The "preview" step is where the change is actually applied to disk.
+      // Writes are guardrailed to content/ and public/images/ in the executor.
+      const appliedFiles =
+        action === "preview" ? writePlanFiles(current.plan).written : undefined;
+      const next = applyAction(current, action, { appliedFiles });
       store.save(next);
       res.json({ command: next });
     } catch (err) {

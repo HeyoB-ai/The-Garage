@@ -289,10 +289,22 @@ function CommandCard({
           {record.plan.files.length > 0 && (
             <ul className="space-y-1.5 mb-3">
               {record.plan.files.map((f, i) => (
-                <li key={i} className="flex items-center gap-2 text-[11px] font-mono text-neutral-400">
-                  {FILE_ICON[f.action]}
-                  <span className="text-neutral-300">{f.path}</span>
-                  <span className="text-neutral-600">— {f.description}</span>
+                <li key={i} className="text-[11px] font-mono text-neutral-400">
+                  <div className="flex items-center gap-2">
+                    {FILE_ICON[f.action]}
+                    <span className="text-neutral-300">{f.path}</span>
+                    <span className="text-neutral-600">— {f.description}</span>
+                  </div>
+                  {f.preview && (
+                    <details className="mt-1 ml-5">
+                      <summary className="cursor-pointer text-neutral-600 hover:text-neutral-400">
+                        view generated content
+                      </summary>
+                      <pre className="mt-1 bg-neutral-900 border border-neutral-800 rounded p-2 text-[10px] text-neutral-400 overflow-x-auto whitespace-pre-wrap">
+{f.preview}
+                      </pre>
+                    </details>
+                  )}
                 </li>
               ))}
             </ul>

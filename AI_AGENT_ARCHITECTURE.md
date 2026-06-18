@@ -139,10 +139,16 @@ hosts the `/api/cms/*` routes above. Until then the chat fails gracefully.
 ✅ Guardrails: `AI_CMS_GUARDRAILS.md` (forbidden-path check enforced in the planner).
 ✅ DB proposal: `DATABASE_SCHEMA.md`.
 
-⬜ Remaining: swap the in-memory store for Supabase; swap the mock planner for a
-   real LLM (Claude) that produces actual file diffs; wire `applyAction`'s
-   TransitionContext to the GitHub API (branch/commit/PR) and Netlify API
-   (preview/deploy); uploads, auth, prerender SEO — all designed above.
+✅ **Content executor (step 2):** the `add_news` intent now generates a real,
+   valid article file (`src/lib/cms/executors/news.ts`) and the server writes it
+   to disk on `preview` (`server/cms/executor.ts`), guardrailed to `content/` and
+   `public/images/` only. The generated content is shown in the dashboard plan.
+
+⬜ Remaining: generators for the other intents (FAQ, opening hours, sections);
+   swap the in-memory store for Supabase; swap placeholder copy for a real LLM
+   (Claude/Gemini) draft; route the executor writes through the GitHub API
+   (branch/commit/PR) + Netlify API (preview/deploy) via `TransitionContext`;
+   uploads, auth, prerender SEO — all designed above.
 
 ### Step-1 API quick reference
 

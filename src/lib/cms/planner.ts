@@ -12,6 +12,8 @@
  */
 import type { ChangePlan, PlannedFileChange } from "./contract";
 import type { ChangeType, IntentName } from "./intent";
+import { slugify } from "./slug";
+import { buildNewsArticleFile } from "./executors/news";
 
 export interface PlanInput {
   intent: IntentName;
@@ -36,17 +38,6 @@ export function isForbiddenPath(path: string): boolean {
   return FORBIDDEN_PATTERNS.some((re) => re.test(path));
 }
 
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize("NFD")
-    // strip combining diacritical marks (U+0300–U+036F)
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 60);
-}
-
 function str(fields: Record<string, unknown>, key: string): string | undefined {
   const v = fields[key];
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
@@ -62,21 +53,23 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
   switch (intent) {
     case "add_news": {
       const title = str(fields, "title") ?? "Nieuw bericht";
-      const slug = slugify(title) || "nieuw-bericht";
+      const needsImage = Boolean(fields.needsImage);
+      const generated = buildNewsArticleFile(title, { needsImage, date: dateStr });
       files.push({
-        path: `content/news/${dateStr}-${slug}.json`,
+        path: generated.path,
         action: "create",
-        description: `New news article "${title}"`,
+        description: `New news article "${generated.article.title}"`,
+        preview: generated.content, // the exact file that will be written
       });
-      if (fields.needsImage) {
+      if (needsImage) {
         files.push({
-          path: `public/images/news/${slug}.jpg`,
+          path: `public/images/news/${generated.article.slug}.jpg`,
           action: "create",
-          description: "Uploaded article image (awaiting upload)",
+          description: "Article image (awaiting upload — using a placeholder until then)",
         });
-        warnings.push("An image is referenced but not uploaded yet.");
+        warnings.push("An image is referenced; upload a photo to replace the placeholder.");
       }
-      summary = `Add a news article "${title}" to /content/news.`;
+      summary = `Add a news article "${generated.article.title}" to /content/news.`;
       break;
     }
     case "add_faq":
