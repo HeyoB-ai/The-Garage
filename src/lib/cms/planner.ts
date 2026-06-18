@@ -56,7 +56,12 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
     case "add_news": {
       const title = str(fields, "title") ?? "Nieuw bericht";
       const needsImage = Boolean(fields.needsImage);
-      const generated = buildNewsArticleFile(title, { needsImage, date: dateStr });
+      const generated = buildNewsArticleFile(title, {
+        needsImage,
+        date: dateStr,
+        excerpt: str(fields, "excerpt"),
+        body: str(fields, "body"),
+      });
       files.push({
         path: generated.path,
         action: "create",
@@ -76,7 +81,7 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
       break;
     }
     case "add_faq": {
-      const entry = buildFaqEntry(str(fields, "question") ?? "");
+      const entry = buildFaqEntry(str(fields, "question") ?? "", str(fields, "answer"));
       files.push({
         path: "content/faq/faq.json",
         action: "update",

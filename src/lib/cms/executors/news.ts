@@ -25,30 +25,33 @@ export interface GeneratedFile {
 
 export function buildNewsArticleFile(
   title: string,
-  opts: { needsImage: boolean; date: string }
+  opts: { needsImage: boolean; date: string; excerpt?: string; body?: string }
 ): GeneratedFile {
   const cleanTitle = title.trim() || "Nieuw bericht";
   const slug = slugify(cleanTitle) || "nieuw-bericht";
+
+  // Placeholder copy used when no LLM draft is supplied (offline / no key).
+  const placeholderBody =
+    `## ${cleanTitle}\n\n` +
+    `This article was drafted automatically from your instruction. ` +
+    `Edit the text below to add the details you want to share.\n\n` +
+    `- Add the key facts here\n` +
+    `- Mention dates, times or locations if relevant\n\n` +
+    `Reach out to our team for more information.`;
 
   const article: NewsArticle = {
     title: cleanTitle,
     slug,
     date: opts.date,
-    excerpt: `${cleanTitle}. Read the full update from The Garage Jávea.`,
+    excerpt: opts.excerpt?.trim() || `${cleanTitle}. Read the full update from The Garage Jávea.`,
     image: opts.needsImage
       ? `/images/news/${slug}.jpg`
       : DEFAULT_IMAGE,
     author: "Website Editor",
     metaTitle: `${cleanTitle} | The Garage Jávea`,
-    metaDescription: `${cleanTitle} — the latest news from The Garage Jávea.`,
+    metaDescription: (opts.excerpt?.trim() || `${cleanTitle} — the latest news from The Garage Jávea.`).slice(0, 160),
     published: true,
-    body:
-      `## ${cleanTitle}\n\n` +
-      `This article was drafted automatically from your instruction. ` +
-      `Edit the text below to add the details you want to share.\n\n` +
-      `- Add the key facts here\n` +
-      `- Mention dates, times or locations if relevant\n\n` +
-      `Reach out to our team for more information.`,
+    body: opts.body?.trim() || placeholderBody,
   };
 
   const fileName = `${opts.date}-${slug}.json`;

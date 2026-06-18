@@ -13,6 +13,7 @@ import { applyAction, createCommand } from "../../src/lib/cms/machine";
 import type { TransitionContext } from "../../src/lib/cms/machine";
 import { resolvePlanFiles, writePlanFiles } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
+import { draftFaqAnswer, draftNews, llmEnabled } from "./llm";
 
 function shortId(n = 5): string {
   return Math.random().toString(36).slice(2, 2 + n);
@@ -85,11 +86,36 @@ async function runSideEffects(
   return { ctx: {}, prNumber };
 }
 
+/**
+ * Before planning, enrich the command's fields with real LLM-drafted copy
+ * (news excerpt/body, FAQ answer). Fail-safe: any miss leaves the placeholders.
+ * The drafted copy lands in `fields`, which the planner's generators read.
+ */
+async function enrichWithCopy(cmd: ApiCommand): Promise<ApiCommand> {
+  if (!llmEnabled()) return cmd;
+  try {
+    if (cmd.intent === "add_news") {
+      const title = typeof cmd.fields.title === "string" ? cmd.fields.title : "";
+      const draft = await draftNews(cmd.inputText, title || "Nieuw bericht");
+      if (draft) return { ...cmd, fields: { ...cmd.fields, ...draft } };
+    } else if (cmd.intent === "add_faq") {
+      const q = typeof cmd.fields.question === "string" ? cmd.fields.question : "";
+      const answer = await draftFaqAnswer(q || cmd.inputText);
+      if (answer) return { ...cmd, fields: { ...cmd.fields, answer } };
+    }
+  } catch (err) {
+    console.error("Copy enrichment failed; using placeholders:", err);
+  }
+  return cmd;
+}
+
 export async function runTransition(
   command: ApiCommand,
   action: CommandAction,
   opts: SideEffectOptions = { allowLocalWrite: true }
 ): Promise<ApiCommand> {
-  const { ctx, prNumber } = await runSideEffects(action, command, opts);
-  return { ...applyAction(command, action, ctx), prNumber };
+  // Draft real copy at plan time (when the content is generated).
+  const cmd = action === "plan" ? await enrichWithCopy(command) : command;
+  const { ctx, prNumber } = await runSideEffects(action, cmd, opts);
+  return { ...applyAction(cmd, action, ctx), prNumber };
 }
