@@ -77,11 +77,16 @@ export class GitHubProvider implements GitProvider {
       } catch {
         /* file does not exist yet on the branch */
       }
+      // The Contents API expects base64. Binary files arrive already base64.
+      const content =
+        file.encoding === "base64"
+          ? file.content
+          : Buffer.from(file.content, "utf8").toString("base64");
       await this.gh(this.repoPath(`/contents/${this.encodePath(file.path)}`), {
         method: "PUT",
         body: JSON.stringify({
           message,
-          content: Buffer.from(file.content, "utf8").toString("base64"),
+          content,
           branch,
           ...(sha ? { sha } : {}),
         }),

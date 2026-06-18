@@ -36,12 +36,12 @@ cmsRouter.post("/analyze", async (req, res) => {
 
 for (const action of ACTIONS) {
   cmsRouter.post(`/${action}`, async (req, res) => {
-    const { command, customerId } = req.body ?? {};
+    const { command, customerId, image } = req.body ?? {};
     if (!command || !(command as ApiCommand).id) {
       return res.status(400).json({ error: "Field 'command' is required." });
     }
     try {
-      const next = await runTransition(command, action, { allowLocalWrite: true });
+      const next = await runTransition(command, action, { allowLocalWrite: true, image });
       await getStore().save(next, customerId ?? null);
       res.json({ command: next });
     } catch (err) {

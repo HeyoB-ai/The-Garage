@@ -68,6 +68,7 @@ export default async (req: Request): Promise<Response> => {
       }
       const next = await runTransition(command, action as CommandAction, {
         allowLocalWrite: false,
+        image: body.image,
       });
       await store.save(next, customerId);
       return json({ command: next });

@@ -180,9 +180,17 @@ Deploy Preview, `deploy` merges it live, `cancel` closes it.
    durable history on mount via `GET /api/cms/commands`. Migration:
    `supabase/migrations/0001_ai_cms.sql`. No creds ⇒ in-memory (unchanged).
 
+✅ **LLM copy (Gemini):** `server/cms/llm.ts` drafts the real news excerpt/body
+   and FAQ answers at plan time (env-gated on `GEMINI_API_KEY`, retries transient
+   errors, `GEMINI_MODEL` overridable, placeholder fallback).
+✅ **Image uploads:** the dashboard uploads a photo for a news article; the
+   backend commits it to `public/images/news/<slug>.<ext>` (binary via the GitHub
+   Contents API / local write) alongside the article and patches the article's
+   `image` field. No upload ⇒ a default image (never broken). SWAP TARGET:
+   route bytes to Supabase Storage + record `media_assets` instead of the repo.
+
 ⬜ Remaining: generators for structural intents (sections, pages, menu items —
-   require approval); swap placeholder copy for a real LLM (Claude/Gemini) draft;
-   media uploads (media_assets + storage), customer/user auth, prerender SEO.
+   require approval); customer/user auth; prerender SEO.
 
 ### Activating real GitHub/Netlify (operator setup)
 

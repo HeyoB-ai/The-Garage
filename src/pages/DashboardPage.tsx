@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Send, Mic, MicOff, Sparkles, Eye, Check, X, Clock, GitBranch,
   AlertTriangle, ShieldCheck, Loader2, ExternalLink, Wifi, WifiOff,
-  FilePlus2, FilePen, FileX2,
+  FilePlus2, FilePen, FileX2, ImagePlus,
 } from "lucide-react";
 import PageShell from "../components/layout/PageShell";
 import Seo from "../components/Seo";
@@ -25,6 +25,20 @@ import {
  * ----------------------------------------------------------------------- */
 
 type Mode = "unknown" | "online" | "offline";
+
+interface UploadedImage {
+  dataUrl: string;
+  filename: string;
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 const STATUS_LABEL: Record<CommandStatus, string> = {
   analyzed: "Analyzed",
@@ -68,6 +82,7 @@ export default function DashboardPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("unknown");
+  const [images, setImages] = useState<Record<string, UploadedImage>>({});
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -120,7 +135,9 @@ export default function DashboardPage() {
         next = applyAction(cmd, action);
       } else {
         try {
-          next = await cmsApi.transition(cmd, action);
+          const extra =
+            action === "preview" && images[cmd.id] ? { image: images[cmd.id] } : undefined;
+          next = await cmsApi.transition(cmd, action, extra);
           setMode("online");
         } catch {
           // Backend went away mid-flow — continue locally.
@@ -234,7 +251,21 @@ export default function DashboardPage() {
               </p>
             )}
             {commands.map((c) => (
-              <CommandCard key={c.id} record={c} busy={busyId === c.id} onAct={act} />
+              <CommandCard
+                key={c.id}
+                record={c}
+                busy={busyId === c.id}
+                onAct={act}
+                image={images[c.id]}
+                onImageSelect={(img) => setImages((prev) => ({ ...prev, [c.id]: img }))}
+                onImageClear={() =>
+                  setImages((prev) => {
+                    const next = { ...prev };
+                    delete next[c.id];
+                    return next;
+                  })
+                }
+              />
             ))}
           </div>
         </div>
@@ -270,10 +301,26 @@ const FILE_ICON: Record<PlannedFileChange["action"], React.ReactNode> = {
 };
 
 function CommandCard({
-  record, busy, onAct,
-}: { record: ApiCommand; busy: boolean; onAct: (c: ApiCommand, a: CommandAction) => void }) {
+  record, busy, onAct, image, onImageSelect, onImageClear,
+}: {
+  record: ApiCommand;
+  busy: boolean;
+  onAct: (c: ApiCommand, a: CommandAction) => void;
+  image?: UploadedImage;
+  onImageSelect: (img: UploadedImage) => void;
+  onImageClear: () => void;
+}) {
   const structural = record.changeType === "structural";
   const stepIndex = STATUS_FLOW.indexOf(record.status);
+  const needsImage = Boolean(record.fields?.needsImage);
+  const canUpload = needsImage && (record.status === "analyzed" || record.status === "planned");
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    onImageSelect({ dataUrl, filename: file.name });
+  };
 
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
@@ -333,6 +380,30 @@ function CommandCard({
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {w}
             </p>
           ))}
+        </div>
+      )}
+
+      {/* Image upload (when the command needs a photo) */}
+      {(canUpload || image) && (
+        <div className="flex items-center gap-3 mb-4 bg-neutral-950 border border-neutral-800 rounded-lg p-3">
+          {image ? (
+            <>
+              <img src={image.dataUrl} alt="upload preview" className="h-14 w-14 object-cover rounded border border-neutral-800" />
+              <span className="text-[11px] font-mono text-neutral-400 flex-grow truncate">{image.filename}</span>
+              <button
+                onClick={onImageClear}
+                className="text-[11px] font-mono text-rose-300 hover:text-rose-200 px-2 py-1"
+              >
+                remove
+              </button>
+            </>
+          ) : (
+            <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer hover:text-amber-400">
+              <ImagePlus className="w-4 h-4 text-amber-500" />
+              <span>Upload a photo for this article</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            </label>
+          )}
         </div>
       )}
 

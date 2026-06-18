@@ -47,6 +47,12 @@ function readJson(abs: string): any {
 export interface ResolvedFile {
   path: string;
   content: string;
+  encoding?: "utf8" | "base64";
+}
+
+/** True when this path may be written (re-exported guardrail for callers). */
+export function isWritablePath(relPath: string): boolean {
+  return isAllowed(relPath);
 }
 
 /** Compute the final file content for each mutation in the plan. */
@@ -102,23 +108,28 @@ export interface ExecutionResult {
   skipped: string[];
 }
 
-/** Resolve and write the plan's files to the local working tree. */
-export function writePlanFiles(plan: ChangePlan | null): ExecutionResult {
+/** Write already-resolved files (text or base64 binary) to the working tree. */
+export function writeResolvedFiles(files: ResolvedFile[]): ExecutionResult {
   const written: string[] = [];
   const skipped: string[] = [];
-  if (!plan) return { written, skipped };
-
-  const resolvedByPath = new Map(resolvePlanFiles(plan).map((r) => [r.path, r]));
-  for (const f of plan.files) {
-    const resolved = resolvedByPath.get(f.path);
-    if (!resolved) {
+  for (const f of files) {
+    if (!isAllowed(f.path)) {
       skipped.push(f.path);
       continue;
     }
     const abs = path.resolve(ROOT, f.path);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, resolved.content, "utf8");
+    if (f.encoding === "base64") {
+      fs.writeFileSync(abs, Buffer.from(f.content, "base64"));
+    } else {
+      fs.writeFileSync(abs, f.content, "utf8");
+    }
     written.push(f.path);
   }
   return { written, skipped };
+}
+
+/** Resolve and write the plan's files to the local working tree. */
+export function writePlanFiles(plan: ChangePlan | null): ExecutionResult {
+  return writeResolvedFiles(resolvePlanFiles(plan));
 }

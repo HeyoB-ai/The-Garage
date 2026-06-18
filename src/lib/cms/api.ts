@@ -31,8 +31,9 @@ export const cmsApi = {
   analyze: (text: string, source: "text" | "voice" = "text") =>
     postCommand("/analyze", { text, source }),
 
-  transition: (command: ApiCommand, action: CommandAction) =>
-    postCommand(`/${action}`, { command }),
+  // `extra` carries optional payload such as an uploaded image on preview.
+  transition: (command: ApiCommand, action: CommandAction, extra?: Record<string, unknown>) =>
+    postCommand(`/${action}`, { command, ...extra }),
 
   async list(): Promise<ApiCommand[]> {
     const res = await fetch(`${BASE}/commands`);

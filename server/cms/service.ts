@@ -11,9 +11,65 @@
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { applyAction, createCommand } from "../../src/lib/cms/machine";
 import type { TransitionContext } from "../../src/lib/cms/machine";
-import { resolvePlanFiles, writePlanFiles } from "./executor";
+import { resolvePlanFiles, writeResolvedFiles, type ResolvedFile } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
 import { draftFaqAnswer, draftNews, llmEnabled } from "./llm";
+import { DEFAULT_IMAGE } from "../../src/lib/cms/executors/news";
+
+// An image uploaded from the dashboard (a data URL + original filename).
+export interface UploadedImage {
+  dataUrl: string;
+  filename?: string;
+}
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // ~4MB (serverless payload headroom)
+
+function decodeDataUrl(dataUrl: string): { ext: string; base64: string } | null {
+  const m = /^data:image\/(png|jpe?g|webp|gif|avif);base64,(.+)$/i.exec(dataUrl ?? "");
+  if (!m) return null;
+  let ext = m[1].toLowerCase();
+  if (ext === "jpeg") ext = "jpg";
+  const base64 = m[2];
+  if (base64.length * 0.75 > MAX_IMAGE_BYTES) return null; // too large
+  return { ext, base64 };
+}
+
+function isNewsJson(p: string): boolean {
+  return /^content\/news\/.+\.json$/.test(p);
+}
+
+/**
+ * Build the files for the preview commit: the plan's content files plus, for a
+ * news article, the uploaded image (committed to public/images/news). The
+ * article's `image` field is patched to point at the committed file; if no image
+ * was uploaded, a placeholder /images/news path is swapped for a default remote
+ * image so the article never renders broken.
+ */
+function buildPreviewFiles(cmd: ApiCommand, image?: UploadedImage): ResolvedFile[] {
+  const files = resolvePlanFiles(cmd.plan);
+  const newsFile = files.find((f) => isNewsJson(f.path));
+  if (!newsFile) return files;
+
+  let article: any;
+  try {
+    article = JSON.parse(newsFile.content);
+  } catch {
+    return files;
+  }
+
+  const decoded = image ? decodeDataUrl(image.dataUrl) : null;
+  if (decoded && typeof article.slug === "string") {
+    const imagePath = `public/images/news/${article.slug}.${decoded.ext}`;
+    article.image = `/images/news/${article.slug}.${decoded.ext}`;
+    newsFile.content = JSON.stringify(article, null, 2) + "\n";
+    files.push({ path: imagePath, content: decoded.base64, encoding: "base64" });
+  } else if (typeof article.image === "string" && article.image.startsWith("/images/news/")) {
+    // Needed an image but none uploaded → avoid a broken link.
+    article.image = DEFAULT_IMAGE;
+    newsFile.content = JSON.stringify(article, null, 2) + "\n";
+  }
+  return files;
+}
 
 function shortId(n = 5): string {
   return Math.random().toString(36).slice(2, 2 + n);
@@ -36,6 +92,8 @@ export function analyzeText(text: string, source: "text" | "voice"): ApiCommand 
 interface SideEffectOptions {
   /** Allow writing to the local working tree (Express dev). Off on serverless. */
   allowLocalWrite?: boolean;
+  /** Image uploaded from the dashboard, committed during preview. */
+  image?: UploadedImage;
 }
 
 async function runSideEffects(
@@ -48,7 +106,7 @@ async function runSideEffects(
   if (action === "preview") {
     const git = getGitProvider();
     const deploy = getDeployProvider();
-    const files = resolvePlanFiles(cmd.plan);
+    const files = buildPreviewFiles(cmd, opts.image);
 
     if (git.enabled && files.length > 0) {
       const branch = `cms/${cmd.intent.replace(/_/g, "-")}-${shortId()}`;
@@ -65,7 +123,7 @@ async function runSideEffects(
     }
 
     if (opts.allowLocalWrite) {
-      return { ctx: { appliedFiles: writePlanFiles(cmd.plan).written }, prNumber };
+      return { ctx: { appliedFiles: writeResolvedFiles(files).written }, prNumber };
     }
     // No provider + no local write ⇒ machine generates a simulated branch/preview.
     return { ctx: {}, prNumber };
@@ -108,6 +166,8 @@ async function enrichWithCopy(cmd: ApiCommand): Promise<ApiCommand> {
   }
   return cmd;
 }
+
+export type RunTransitionOptions = SideEffectOptions;
 
 export async function runTransition(
   command: ApiCommand,

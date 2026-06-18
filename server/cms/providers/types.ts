@@ -10,6 +10,9 @@
 export interface CommitFile {
   path: string;
   content: string;
+  // "utf8" (default) for text files; "base64" when `content` is already base64
+  // (binary assets such as uploaded images).
+  encoding?: "utf8" | "base64";
 }
 
 export interface PullRequestInfo {

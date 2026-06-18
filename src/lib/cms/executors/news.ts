@@ -14,7 +14,7 @@ import { slugify } from "../slug";
 
 // Neutral default image so a freshly generated article always renders. When the
 // customer uploads a photo it replaces this path.
-const DEFAULT_IMAGE =
+export const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1200";
 
 export interface GeneratedFile {
