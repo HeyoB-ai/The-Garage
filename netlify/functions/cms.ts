@@ -76,7 +76,8 @@ export default async (req: Request): Promise<Response> => {
     return json({ error: `Unknown action "${action}".` }, 404);
   } catch (err) {
     if (err instanceof TransitionError) return json({ error: err.message }, 409);
-    console.error("CMS function error:", err);
-    return json({ error: "Internal error while applying the change." }, 500);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("CMS function error:", detail);
+    return json({ error: "Internal error while applying the change.", detail }, 500);
   }
 };
