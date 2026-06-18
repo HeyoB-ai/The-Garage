@@ -31,6 +31,15 @@ interface UploadedImage {
   filename: string;
 }
 
+type PreviewState = "building" | "ready" | "timeout";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// A real Netlify deploy preview (not the simulated "--the-garage" mock URL).
+function isRealPreviewUrl(url?: string | null): boolean {
+  return Boolean(url) && url!.includes(".netlify.app") && !url!.includes("the-garage");
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -83,6 +92,9 @@ export default function DashboardPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("unknown");
   const [images, setImages] = useState<Record<string, UploadedImage>>({});
+  // Per-command deploy-preview reachability: building -> ready | timeout.
+  const [previewState, setPreviewState] = useState<Record<string, PreviewState>>({});
+  const pollCancels = useRef<Record<string, boolean>>({});
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -109,6 +121,38 @@ export default function DashboardPage() {
       active = false;
     };
   }, []);
+
+  // Stop any running preview polls when the dashboard unmounts.
+  useEffect(() => {
+    return () => {
+      for (const id of Object.keys(pollCancels.current)) pollCancels.current[id] = true;
+    };
+  }, []);
+
+  // Poll the server-side reachability check until the deploy preview is live
+  // (~4 min max). Mock URLs are treated as ready immediately (nothing to wait
+  // for). Any failure just keeps "building" — the Open preview link still works.
+  const startPreviewPoll = async (cmd: ApiCommand) => {
+    const url = cmd.previewUrl;
+    if (!url) return;
+    if (!isRealPreviewUrl(url)) {
+      setPreviewState((s) => ({ ...s, [cmd.id]: "ready" }));
+      return;
+    }
+    setPreviewState((s) => ({ ...s, [cmd.id]: "building" }));
+    pollCancels.current[cmd.id] = false;
+    for (let attempt = 0; attempt < 48; attempt++) {
+      if (pollCancels.current[cmd.id]) return;
+      const { ready } = await cmsApi.previewStatus(url);
+      if (pollCancels.current[cmd.id]) return;
+      if (ready) {
+        setPreviewState((s) => ({ ...s, [cmd.id]: "ready" }));
+        return;
+      }
+      await sleep(5000);
+    }
+    setPreviewState((s) => ({ ...s, [cmd.id]: "timeout" }));
+  };
 
   const submit = async (text: string, source: "text" | "voice") => {
     const trimmed = text.trim();
@@ -146,6 +190,13 @@ export default function DashboardPage() {
         }
       }
       setCommands((prev) => prev.map((c) => (c.id === cmd.id ? next : c)));
+
+      // Kick off / stop preview reachability polling.
+      if (action === "preview" && next.status === "preview_ready") {
+        void startPreviewPoll(next);
+      } else if (action === "approve" || action === "cancel") {
+        pollCancels.current[cmd.id] = true;
+      }
     } finally {
       setBusyId(null);
     }
@@ -256,6 +307,7 @@ export default function DashboardPage() {
                 record={c}
                 busy={busyId === c.id}
                 onAct={act}
+                previewState={previewState[c.id]}
                 image={images[c.id]}
                 onImageSelect={(img) => setImages((prev) => ({ ...prev, [c.id]: img }))}
                 onImageClear={() =>
@@ -301,11 +353,12 @@ const FILE_ICON: Record<PlannedFileChange["action"], React.ReactNode> = {
 };
 
 function CommandCard({
-  record, busy, onAct, image, onImageSelect, onImageClear,
+  record, busy, onAct, previewState, image, onImageSelect, onImageClear,
 }: {
   record: ApiCommand;
   busy: boolean;
   onAct: (c: ApiCommand, a: CommandAction) => void;
+  previewState?: PreviewState;
   image?: UploadedImage;
   onImageSelect: (img: UploadedImage) => void;
   onImageClear: () => void;
@@ -314,6 +367,8 @@ function CommandCard({
   const stepIndex = STATUS_FLOW.indexOf(record.status);
   const needsImage = Boolean(record.fields?.needsImage);
   const canUpload = needsImage && (record.status === "analyzed" || record.status === "planned");
+  const previewBuilding = previewState === "building";
+  const previewTimedOut = previewState === "timeout";
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -437,23 +492,33 @@ function CommandCard({
           <span className="flex items-center gap-1.5">
             <GitBranch className="w-3.5 h-3.5 text-amber-500" /> {record.branchName}
           </span>
-          {record.previewUrl && (
-            <a
-              href={record.previewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 text-amber-400 hover:underline"
-            >
-              <ExternalLink className="w-3.5 h-3.5" /> Open preview
-            </a>
-          )}
+          {record.previewUrl &&
+            (previewBuilding ? (
+              <span className="flex items-center gap-1.5 text-amber-300" title="Waiting for the Netlify deploy preview">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Preview building…
+              </span>
+            ) : (
+              <a
+                href={record.previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-amber-400 hover:underline"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Open preview
+              </a>
+            ))}
         </div>
       )}
-      {record.status === "preview_ready" && record.previewUrl && (
+      {record.status === "preview_ready" && record.previewUrl && previewBuilding && (
         <p className="flex items-start gap-1.5 text-[11px] text-neutral-500 mb-4 -mt-2">
           <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          The preview builds on Netlify and can take ~1–2 minutes. If you see “Site not found”,
-          wait a moment and refresh.
+          Waiting for the Netlify deploy preview to come online — this can take a few minutes.
+        </p>
+      )}
+      {record.status === "preview_ready" && record.previewUrl && previewTimedOut && (
+        <p className="flex items-start gap-1.5 text-[11px] text-neutral-500 mb-4 -mt-2">
+          <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          This is taking longer than usual — you can try “Open preview” anyway.
         </p>
       )}
 

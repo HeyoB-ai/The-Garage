@@ -35,6 +35,26 @@ export const cmsApi = {
   transition: (command: ApiCommand, action: CommandAction, extra?: Record<string, unknown>) =>
     postCommand(`/${action}`, { command, ...extra }),
 
+  /**
+   * Ask the server whether a deploy-preview URL is reachable yet. Any failure
+   * resolves to { ready: false } so the UI keeps showing "building" and never
+   * crashes (e.g. offline / no backend).
+   */
+  async previewStatus(url: string): Promise<{ ready: boolean }> {
+    try {
+      const res = await fetch(`${BASE}/preview-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) return { ready: false };
+      const data = (await res.json()) as { ready?: boolean };
+      return { ready: data.ready === true };
+    } catch {
+      return { ready: false };
+    }
+  },
+
   async list(): Promise<ApiCommand[]> {
     const res = await fetch(`${BASE}/commands`);
     if (!res.ok) throw new Error(`Failed to list commands (${res.status}).`);

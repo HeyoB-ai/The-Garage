@@ -17,7 +17,7 @@
 import { Router } from "express";
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
-import { analyzeText, runTransition } from "./service";
+import { analyzeText, checkPreviewReady, runTransition } from "./service";
 import { getStore } from "./stores";
 
 export const cmsRouter = Router();
@@ -53,6 +53,14 @@ for (const action of ACTIONS) {
     }
   });
 }
+
+cmsRouter.post("/preview-status", async (req, res) => {
+  const url = (req.body ?? {}).url;
+  if (typeof url !== "string" || !url) {
+    return res.status(400).json({ error: "Field 'url' is required.", ready: false });
+  }
+  res.json({ ready: await checkPreviewReady(url) });
+});
 
 cmsRouter.get("/commands", async (req, res) => {
   const customerId = typeof req.query.customerId === "string" ? req.query.customerId : undefined;

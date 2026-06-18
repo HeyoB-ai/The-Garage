@@ -197,3 +197,40 @@ export async function runTransition(
   const { ctx, prNumber } = await runSideEffects(action, cmd, opts);
   return { ...applyAction(cmd, action, ctx), prNumber };
 }
+
+/**
+ * Server-side reachability check for a Netlify deploy preview (no CORS issues).
+ * Only probes *.netlify.app hosts, so it can't be used to scan arbitrary URLs.
+ * Returns true only on a 2xx response; false on 404 / error / timeout.
+ */
+export async function checkPreviewReady(url: string): Promise<boolean> {
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return false;
+  }
+  if (!host.endsWith(".netlify.app")) return false;
+
+  const probe = async (method: "HEAD" | "GET"): Promise<boolean> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(url, {
+        method,
+        redirect: "follow",
+        signal: controller.signal,
+        headers: { "User-Agent": "TheGarageCMS/1.0 (+preview check)" },
+      });
+      return res.ok; // 2xx only
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  // HEAD first; some hosts don't support it, so fall back to GET.
+  if (await probe("HEAD")) return true;
+  return probe("GET");
+}

@@ -10,7 +10,7 @@
  */
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
-import { analyzeText, runTransition } from "../../server/cms/service";
+import { analyzeText, checkPreviewReady, runTransition } from "../../server/cms/service";
 import { getStore } from "../../server/cms/stores";
 
 const ACTIONS = new Set<CommandAction>(["plan", "preview", "approve", "deploy", "cancel"]);
@@ -26,7 +26,7 @@ function json(body: unknown, status = 200): Response {
 // splat-less redirect while preserving the ORIGINAL request path, so we find
 // the first known action token in the path (robust to both /api/cms/<action>
 // and the direct /.netlify/functions/cms/<action> form).
-const ALL_ACTIONS = new Set<string>(["analyze", ...ACTIONS]);
+const ALL_ACTIONS = new Set<string>(["analyze", "preview-status", ...ACTIONS]);
 
 function resolveAction(req: Request): string {
   const segments = new URL(req.url).pathname.split("/").filter(Boolean);
@@ -59,6 +59,11 @@ export default async (req: Request): Promise<Response> => {
       const command = analyzeText(body.text, body.source === "voice" ? "voice" : "text");
       await store.save(command, customerId);
       return json({ command });
+    }
+
+    if (action === "preview-status") {
+      const url = typeof body.url === "string" ? body.url : "";
+      return json({ ready: url ? await checkPreviewReady(url) : false });
     }
 
     if (ACTIONS.has(action as CommandAction)) {
