@@ -36,12 +36,12 @@ function listJsonDir(rel: string): any[] {
 }
 
 export interface SiteSnapshot {
-  news: { id: string; title: string; date: string; published: boolean }[];
-  stock: { id: string; make: string; model: string; status: string; price: number }[];
-  portfolio: { id: string; title: string }[];
-  faq: { id: string; question: string }[];
-  sections: { id: string; label: string }[];
-  pages: { id: string; title: string }[];
+  news: { id: string; type: "news"; title: string; date: string; published: boolean }[];
+  stock: { id: string; type: "stock"; make: string; model: string; status: string; price: number }[];
+  portfolio: { id: string; type: "portfolio"; title: string }[];
+  faq: { id: string; type: "faq"; question: string }[];
+  sections: { id: string; type: "section"; label: string }[];
+  pages: { id: string; type: "page"; title: string }[];
   openingHours: { weekdays?: string; weekend?: string };
   theme: { accent: string; font: string; logo: string };
 }
@@ -51,6 +51,7 @@ export function buildSiteSnapshot(): SiteSnapshot {
     .slice(0, 30)
     .map((a) => ({
       id: String(a.slug ?? ""),
+      type: "news" as const,
       title: String(a.title ?? ""),
       date: String(a.date ?? ""),
       published: a.published !== false,
@@ -58,11 +59,12 @@ export function buildSiteSnapshot(): SiteSnapshot {
 
   const faqData = readJson("content/faq/faq.json");
   const faq = Array.isArray(faqData?.items)
-    ? faqData.items.map((f: any) => ({ id: String(f.id ?? ""), question: String(f.question ?? "") }))
+    ? faqData.items.map((f: any) => ({ id: String(f.id ?? ""), type: "faq" as const, question: String(f.question ?? "") }))
     : [];
 
   const pages = listJsonDir("content/pages").map((p) => ({
     id: String(p.slug ?? ""),
+    type: "page" as const,
     title: String(p.title ?? ""),
   }));
 
@@ -72,18 +74,19 @@ export function buildSiteSnapshot(): SiteSnapshot {
 
   const sections = ((menuConfig as any).items ?? [])
     .filter((i: any) => i.type === "section")
-    .map((i: any) => ({ id: String(i.id), label: String(i.label) }));
+    .map((i: any) => ({ id: String(i.id), type: "section" as const, label: String(i.label) }));
 
   return {
     news,
     stock: CARS_STOCK.map((c) => ({
       id: c.id,
+      type: "stock" as const,
       make: c.make,
       model: c.model,
       status: c.status,
       price: c.price,
     })),
-    portfolio: PORTFOLIO_ITEMS.map((p) => ({ id: p.id, title: p.title })),
+    portfolio: PORTFOLIO_ITEMS.map((p) => ({ id: p.id, type: "portfolio" as const, title: p.title })),
     faq,
     sections,
     pages,

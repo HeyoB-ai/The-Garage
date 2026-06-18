@@ -175,6 +175,23 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
       summary = `Add a new page "${title}" with its own route (structural).`;
       break;
     }
+    case "set_image": {
+      const targetId = str(fields, "targetId") ?? "item";
+      const area = str(fields, "area") ?? "item";
+      const targetPath = area === "news" ? `content/news/${targetId}.json` : "src/data.ts";
+      files.push({
+        path: targetPath,
+        action: "update",
+        description: `Set the image of ${area} item "${targetId}"`,
+      });
+      files.push({
+        path: `public/images/${area}/${targetId}`,
+        action: "create",
+        description: "Image asset (uploaded or fetched at preview)",
+      });
+      summary = `Set/replace the image on ${area} item "${targetId}".`;
+      break;
+    }
     case "create_preview":
       summary = "Create a preview deploy for the current change.";
       break;

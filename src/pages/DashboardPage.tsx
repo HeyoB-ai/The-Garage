@@ -365,7 +365,7 @@ function CommandCard({
 }) {
   const structural = record.changeType === "structural";
   const stepIndex = STATUS_FLOW.indexOf(record.status);
-  const needsImage = Boolean(record.fields?.needsImage);
+  const needsImage = Boolean(record.fields?.needsImage) || record.intent === "set_image";
   const canUpload = needsImage && (record.status === "analyzed" || record.status === "planned");
   const previewBuilding = previewState === "building";
   const previewTimedOut = previewState === "timeout";

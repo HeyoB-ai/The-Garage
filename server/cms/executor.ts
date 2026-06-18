@@ -24,7 +24,8 @@ import type { FaqItem } from "../../src/types";
 
 const ROOT = process.cwd();
 const ALLOWED_PREFIXES = ["content/", "public/images/"];
-const ALLOWED_FILES = ["src/config/site.json"];
+// src/data.ts holds stock/portfolio data and is patched (validated) by set_image.
+const ALLOWED_FILES = ["src/config/site.json", "src/data.ts"];
 
 function isAllowed(relPath: string): boolean {
   const norm = relPath.replace(/\\/g, "/");

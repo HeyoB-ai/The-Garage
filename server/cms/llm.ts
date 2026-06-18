@@ -178,6 +178,7 @@ const PLANNER_SYSTEM =
   `- update_opening_hours { from?, to? }                     // change opening hours (HH:MM)\n` +
   `- add_faq { question, answer? }                           // add a FAQ entry\n` +
   `- add_section { sectionType, menuLabel? }                 // add a new section (structural)\n` +
+  `- set_image { targetId, image? }                          // set/replace the photo of an EXISTING item; targetId MUST be an id from the snapshot (news slug, stock id like "car-3", or portfolio id). image may be an image URL.\n` +
   `- clarify { question }                                    // ask the user a question\n` +
   `- unsupported { message }                                 // explain why it can't be done\n\n` +
   `Return JSON: {"understood": string (one short sentence in the user's language summarising ` +
@@ -225,7 +226,7 @@ const MAX_FETCH_BYTES = 1024 * 1024; // ~1MB
 const MAX_TEXT_CHARS = 4000;
 
 /** Only allow external, public http(s) URLs (basic SSRF guard). */
-function isPublicHttpUrl(raw: string): boolean {
+export function isPublicHttpUrl(raw: string): boolean {
   let u: URL;
   try {
     u = new URL(raw);
@@ -301,6 +302,42 @@ export async function fetchArticleText(url: string): Promise<string | null> {
     const text = htmlToText(html);
     if (text.length < 50) return null; // too little to summarize
     return text.slice(0, MAX_TEXT_CHARS);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const IMAGE_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+};
+
+/** Download an external image as base64, or null on any failure. */
+export async function fetchImageAsBase64(
+  url: string
+): Promise<{ base64: string; ext: string } | null> {
+  if (!isPublicHttpUrl(url)) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": "TheGarageCMS/1.0 (+image fetch)", Accept: "image/*" },
+    });
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    const ext = IMAGE_EXT[ct];
+    if (!ext) return null; // not a recognised image type
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length === 0 || buf.length > 4 * 1024 * 1024) return null; // ~4MB cap
+    return { base64: buf.toString("base64"), ext };
   } catch {
     return null;
   } finally {

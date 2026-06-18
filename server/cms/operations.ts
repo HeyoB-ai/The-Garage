@@ -13,6 +13,7 @@ export type OperationType =
   | "update_opening_hours"
   | "add_faq"
   | "add_section"
+  | "set_image"
   | "clarify"
   | "unsupported";
 
@@ -23,6 +24,7 @@ export const ACTIONABLE_OPS: OperationType[] = [
   "update_opening_hours",
   "add_faq",
   "add_section",
+  "set_image",
 ];
 
 // Allowed fields per operation. Anything else the model sends is dropped.
@@ -32,6 +34,7 @@ const ALLOWED_FIELDS: Record<OperationType, string[]> = {
   update_opening_hours: ["from", "to", "weekdays", "weekend"],
   add_faq: ["question", "answer"],
   add_section: ["sectionType", "menuLabel"],
+  set_image: ["targetId", "image"],
   clarify: ["question"],
   unsupported: ["message"],
 };

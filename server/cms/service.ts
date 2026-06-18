@@ -14,10 +14,14 @@ import type { TransitionContext } from "../../src/lib/cms/machine";
 import { changeTypeFor, requiresApprovalFor, type IntentName } from "../../src/lib/cms/intent";
 import { resolvePlanFiles, writeResolvedFiles, type ResolvedFile } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
-import { draftFaqAnswer, draftNews, fetchArticleText, llmEnabled, planInstruction } from "./llm";
+import { draftFaqAnswer, draftNews, fetchArticleText, fetchImageAsBase64, llmEnabled, planInstruction } from "./llm";
 import { DEFAULT_IMAGE } from "../../src/lib/cms/executors/news";
-import { buildSiteSnapshot } from "./snapshot";
+import { buildSiteSnapshot, type SiteSnapshot } from "./snapshot";
 import { pickOperation, validateOperations } from "./operations";
+import fs from "fs";
+import path from "path";
+
+const ROOT = process.cwd();
 
 // An image uploaded from the dashboard (a data URL + original filename).
 export interface UploadedImage {
@@ -39,6 +43,144 @@ function decodeDataUrl(dataUrl: string): { ext: string; base64: string } | null 
 
 function isNewsJson(p: string): boolean {
   return /^content\/news\/.+\.json$/.test(p);
+}
+
+/* ---------------------------------------------------------------------- *
+ * set_image: set/replace the photo on an EXISTING item (news / stock /
+ * portfolio), targeted by id. News patches its JSON file; stock & portfolio
+ * patch src/data.ts with a precise, validated edit.
+ * ---------------------------------------------------------------------- */
+
+export type SnapshotArea = "news" | "stock" | "portfolio";
+
+/** Find which area an id belongs to, or null if it doesn't exist. */
+export function resolveArea(targetId: string, snapshot: SiteSnapshot): SnapshotArea | null {
+  if (snapshot.stock.some((s) => s.id === targetId)) return "stock";
+  if (snapshot.portfolio.some((p) => p.id === targetId)) return "portfolio";
+  if (snapshot.news.some((n) => n.id === targetId)) return "news";
+  return null;
+}
+
+function findNewsFileBySlug(slug: string): { path: string; json: any } | null {
+  try {
+    for (const f of fs.readdirSync(path.join(ROOT, "content/news"))) {
+      if (!f.endsWith(".json") || f.startsWith("_")) continue;
+      const rel = `content/news/${f}`;
+      const json = JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
+      if (json?.slug === slug) return { path: rel, json };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+const countChar = (s: string, ch: string) => s.split(ch).length - 1;
+
+/**
+ * Precise, validated patch of an item's `image` field in src/data.ts. Finds the
+ * object with `id: "<targetId>"`, replaces (or inserts) only its `image` value,
+ * and verifies the result is structurally intact. Returns null on any doubt, so
+ * the file is NEVER written in a broken state.
+ */
+function patchDataTsImage(text: string, targetId: string, imageRef: string): string | null {
+  const safeRef = imageRef.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  if (/[\n\r]/.test(imageRef)) return null;
+
+  let idIdx = text.indexOf(`id: "${targetId}"`);
+  if (idIdx < 0) idIdx = text.indexOf(`id: '${targetId}'`);
+  if (idIdx < 0) return null;
+
+  // Bound the object to before the next `id:` so we patch the right one.
+  const searchFrom = idIdx + 6;
+  const nextDq = text.indexOf('id: "', searchFrom);
+  const nextSq = text.indexOf("id: '", searchFrom);
+  let nextIdx = -1;
+  for (const n of [nextDq, nextSq]) if (n >= 0 && (nextIdx < 0 || n < nextIdx)) nextIdx = n;
+  const regionEnd = nextIdx >= 0 ? nextIdx : text.length;
+
+  const before = text.slice(0, idIdx);
+  const region = text.slice(idIdx, regionEnd);
+  const after = text.slice(regionEnd);
+
+  const imgRe = /image:\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
+  let newRegion: string;
+  if (imgRe.test(region)) {
+    newRegion = region.replace(imgRe, `image: "${safeRef}"`);
+  } else {
+    const idLineEnd = region.indexOf("\n");
+    if (idLineEnd < 0) return null;
+    newRegion = region.slice(0, idLineEnd + 1) + `    image: "${safeRef}",\n` + region.slice(idLineEnd + 1);
+  }
+  const result = before + newRegion + after;
+
+  // Validation: structure intact, exactly one matching id, image present.
+  const ok =
+    countChar(result, "{") === countChar(text, "{") &&
+    countChar(result, "}") === countChar(text, "}") &&
+    countChar(result, "[") === countChar(text, "[") &&
+    countChar(result, "]") === countChar(text, "]") &&
+    countChar(result, "id:") === countChar(text, "id:") &&
+    countChar(result, "image:") >= countChar(text, "image:") &&
+    result.includes(`image: "${safeRef}"`);
+  return ok ? result : null;
+}
+
+/** Resolve the image bytes: uploaded image, else fetched URL, else the raw URL. */
+async function resolveSetImageSource(
+  image: UploadedImage | undefined,
+  imageUrl: string | undefined
+): Promise<{ kind: "local"; base64: string; ext: string } | { kind: "remote"; url: string } | null> {
+  if (image) {
+    const decoded = decodeDataUrl(image.dataUrl);
+    if (decoded) return { kind: "local", ...decoded };
+  }
+  if (imageUrl) {
+    const fetched = await fetchImageAsBase64(imageUrl);
+    if (fetched) return { kind: "local", ...fetched };
+    return { kind: "remote", url: imageUrl }; // fall back to the URL itself
+  }
+  return null;
+}
+
+async function buildSetImageFiles(cmd: ApiCommand, image?: UploadedImage): Promise<ResolvedFile[]> {
+  const targetId = typeof cmd.fields.targetId === "string" ? cmd.fields.targetId : "";
+  const area = cmd.fields.area as SnapshotArea | undefined;
+  const imageUrl = typeof cmd.fields.imageUrl === "string" ? cmd.fields.imageUrl : undefined;
+  if (!targetId || !area) return [];
+
+  const src = await resolveSetImageSource(image, imageUrl);
+  if (!src) return [];
+
+  // Where the item will point, and the optional committed image file.
+  let imageRef: string;
+  let imageFile: ResolvedFile | null = null;
+  if (src.kind === "local") {
+    imageRef = `/images/${area}/${targetId}.${src.ext}`;
+    imageFile = { path: `public/images/${area}/${targetId}.${src.ext}`, content: src.base64, encoding: "base64" };
+  } else {
+    imageRef = src.url;
+  }
+
+  const files: ResolvedFile[] = [];
+  if (area === "news") {
+    const nf = findNewsFileBySlug(targetId);
+    if (!nf) return [];
+    nf.json.image = imageRef;
+    files.push({ path: nf.path, content: JSON.stringify(nf.json, null, 2) + "\n" });
+  } else {
+    let text: string | null = null;
+    try {
+      text = fs.readFileSync(path.join(ROOT, "src/data.ts"), "utf8");
+    } catch {
+      return [];
+    }
+    const patched = patchDataTsImage(text, targetId, imageRef);
+    if (!patched) return []; // validation failed → never write a broken file
+    files.push({ path: "src/data.ts", content: patched });
+  }
+  if (imageFile) files.push(imageFile);
+  return files;
 }
 
 /**
@@ -111,6 +253,29 @@ export async function planCommand(text: string, source: "text" | "voice"): Promi
         const intent = op.type as IntentName;
         const fields: Record<string, unknown> = { ...op.fields };
 
+        // set_image: resolve the target id to an area, or ask which item.
+        if (intent === "set_image") {
+          const targetId = typeof fields.targetId === "string" ? fields.targetId : "";
+          const area = targetId ? resolveArea(targetId, snapshot) : null;
+          if (!area) {
+            return createCommandFrom(text, source, {
+              intent: "clarify",
+              changeType: "unknown",
+              requiresApproval: false,
+              fields: {
+                question:
+                  "Welk item bedoel je precies? Noem bijvoorbeeld het nieuwsbericht of het voertuig waarvan je de foto wilt aanpassen.",
+              },
+              understood: result.understood,
+            });
+          }
+          fields.area = area;
+          if (typeof fields.image === "string" && /^https?:\/\//i.test(fields.image)) {
+            fields.imageUrl = fields.image;
+          }
+          delete fields.image;
+        }
+
         // Robustness for add_news: derive image/source hints from the raw text.
         if (intent === "add_news") {
           if (fields.needsImage == null) {
@@ -162,7 +327,10 @@ async function runSideEffects(
   if (action === "preview") {
     const git = getGitProvider();
     const deploy = getDeployProvider();
-    const files = buildPreviewFiles(cmd, opts.image);
+    const files =
+      cmd.intent === "set_image"
+        ? await buildSetImageFiles(cmd, opts.image)
+        : buildPreviewFiles(cmd, opts.image);
 
     if (git.enabled && files.length > 0) {
       const branch = `cms/${cmd.intent.replace(/_/g, "-")}-${shortId()}`;
