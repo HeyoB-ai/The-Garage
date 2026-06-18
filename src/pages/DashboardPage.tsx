@@ -7,8 +7,9 @@ import {
 import PageShell from "../components/layout/PageShell";
 import Seo from "../components/Seo";
 import { INTENT_LABELS } from "../lib/cms/intent";
-import { cmsApi } from "../lib/cms/api";
+import { cmsApi, ApiError } from "../lib/cms/api";
 import { createCommand, applyAction } from "../lib/cms/machine";
+import type { TransitionContext } from "../lib/cms/machine";
 import {
   STATUS_FLOW,
   type ApiCommand,
@@ -94,6 +95,7 @@ export default function DashboardPage() {
   const [images, setImages] = useState<Record<string, UploadedImage>>({});
   // Per-command deploy-preview reachability: building -> ready | timeout.
   const [previewState, setPreviewState] = useState<Record<string, PreviewState>>({});
+  const [actionError, setActionError] = useState<Record<string, string>>({});
   const pollCancels = useRef<Record<string, boolean>>({});
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -171,27 +173,49 @@ export default function DashboardPage() {
     setAnalyzing(false);
   };
 
+  // Offline fallback marks a preview as simulated, with an honest reason.
+  const offlineCtx = (action: CommandAction): TransitionContext | undefined =>
+    action === "preview"
+      ? {
+          previewSimulated: true,
+          previewNote: "Kon de server niet bereiken — preview gesimuleerd (demo).",
+        }
+      : undefined;
+
   const act = async (cmd: ApiCommand, action: CommandAction) => {
     setBusyId(cmd.id);
-    let next: ApiCommand;
+    setActionError((prev) => {
+      const next = { ...prev };
+      delete next[cmd.id];
+      return next;
+    });
     try {
+      let next: ApiCommand;
       if (mode === "offline") {
-        next = applyAction(cmd, action);
+        next = applyAction(cmd, action, offlineCtx(action));
       } else {
         try {
           const extra =
             action === "preview" && images[cmd.id] ? { image: images[cmd.id] } : undefined;
           next = await cmsApi.transition(cmd, action, extra);
           setMode("online");
-        } catch {
-          // Backend went away mid-flow — continue locally.
-          next = applyAction(cmd, action);
+        } catch (e) {
+          if (e instanceof ApiError) {
+            // Server responded with an error — surface it, never fake a success.
+            setActionError((prev) => ({
+              ...prev,
+              [cmd.id]: e.status >= 500 ? "Server-fout — zie functielogs" : e.message,
+            }));
+            return;
+          }
+          // Truly unreachable → offline simulation (clearly marked).
+          next = applyAction(cmd, action, offlineCtx(action));
           setMode("offline");
         }
       }
       setCommands((prev) => prev.map((c) => (c.id === cmd.id ? next : c)));
 
-      // Kick off / stop preview reachability polling.
+      // Poll only for a real preview; simulated ones have no URL to check.
       if (action === "preview" && next.status === "preview_ready") {
         void startPreviewPoll(next);
       } else if (action === "approve" || action === "cancel") {
@@ -308,6 +332,7 @@ export default function DashboardPage() {
                 busy={busyId === c.id}
                 onAct={act}
                 previewState={previewState[c.id]}
+                actionError={actionError[c.id]}
                 image={images[c.id]}
                 onImageSelect={(img) => setImages((prev) => ({ ...prev, [c.id]: img }))}
                 onImageClear={() =>
@@ -353,12 +378,13 @@ const FILE_ICON: Record<PlannedFileChange["action"], React.ReactNode> = {
 };
 
 function CommandCard({
-  record, busy, onAct, previewState, image, onImageSelect, onImageClear,
+  record, busy, onAct, previewState, actionError, image, onImageSelect, onImageClear,
 }: {
   record: ApiCommand;
   busy: boolean;
   onAct: (c: ApiCommand, a: CommandAction) => void;
   previewState?: PreviewState;
+  actionError?: string;
   image?: UploadedImage;
   onImageSelect: (img: UploadedImage) => void;
   onImageClear: () => void;
@@ -373,6 +399,8 @@ function CommandCard({
   const uploadLabel = record.intent === "set_theme" ? "Upload a logo (optional)" : "Upload a photo";
   const previewBuilding = previewState === "building";
   const previewTimedOut = previewState === "timeout";
+  // A preview is "real" only when not simulated AND it has a real Netlify URL.
+  const realPreview = !record.previewSimulated && isRealPreviewUrl(record.previewUrl);
   // Steering intents: show a friendly message, no pipeline / buttons.
   const isInfo =
     record.intent === "clarify" || record.intent === "unsupported" || record.intent === "unknown";
@@ -517,20 +545,20 @@ function CommandCard({
         </div>
       )}
 
-      {/* Branch + preview meta */}
+      {/* Branch line (only a real branch is ever shown — never a fake one) */}
       {record.branchName && record.status !== "cancelled" && (
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-neutral-500 mb-4">
           <span className="flex items-center gap-1.5">
             <GitBranch className="w-3.5 h-3.5 text-amber-500" /> {record.branchName}
           </span>
-          {record.previewUrl &&
+          {realPreview &&
             (previewBuilding ? (
               <span className="flex items-center gap-1.5 text-amber-300" title="Waiting for the Netlify deploy preview">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Preview building…
               </span>
             ) : (
               <a
-                href={record.previewUrl}
+                href={record.previewUrl!}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 text-amber-400 hover:underline"
@@ -540,16 +568,37 @@ function CommandCard({
             ))}
         </div>
       )}
-      {record.status === "preview_ready" && record.previewUrl && previewBuilding && (
+
+      {/* Simulated preview: clearly different badge + the reason, NO dead link */}
+      {record.status === "preview_ready" && record.previewSimulated && (
+        <div className="flex items-start gap-2 mb-4 bg-neutral-950 border border-neutral-800 rounded-lg p-3">
+          <span className="shrink-0 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded border bg-amber-500/10 text-amber-300 border-amber-500/30">
+            Preview gesimuleerd
+          </span>
+          <span className="text-[11px] text-neutral-400 leading-relaxed">
+            {record.previewNote || "Geen echte deploy preview gemaakt."}
+          </span>
+        </div>
+      )}
+
+      {/* Real-preview build hints */}
+      {realPreview && previewBuilding && (
         <p className="flex items-start gap-1.5 text-[11px] text-neutral-500 mb-4 -mt-2">
           <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           Waiting for the Netlify deploy preview to come online — this can take a few minutes.
         </p>
       )}
-      {record.status === "preview_ready" && record.previewUrl && previewTimedOut && (
+      {realPreview && previewTimedOut && (
         <p className="flex items-start gap-1.5 text-[11px] text-neutral-500 mb-4 -mt-2">
           <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           This is taking longer than usual — you can try “Open preview” anyway.
+        </p>
+      )}
+
+      {/* Server error (a 500 etc.) — surfaced, not silently simulated */}
+      {actionError && (
+        <p className="flex items-start gap-1.5 text-[11px] text-rose-300 mb-4">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {actionError}
         </p>
       )}
 

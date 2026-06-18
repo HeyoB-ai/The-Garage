@@ -13,6 +13,15 @@ import type { ApiCommand, CommandAction, CommandResponse } from "./contract";
 
 const BASE = "/api/cms";
 
+// Error that carries the HTTP status, so callers can distinguish a server error
+// (the server responded, e.g. 500/409) from being truly offline (fetch rejects).
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function postCommand(path: string, body: unknown): Promise<ApiCommand> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
@@ -21,7 +30,7 @@ async function postCommand(path: string, body: unknown): Promise<ApiCommand> {
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
-    throw new Error(detail.error || `Request to ${path} failed (${res.status}).`);
+    throw new ApiError(detail.error || `Request to ${path} failed (${res.status}).`, res.status);
   }
   const data = (await res.json()) as CommandResponse;
   return data.command;

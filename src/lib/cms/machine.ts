@@ -37,6 +37,9 @@ export interface TransitionContext {
   previewUrl?: string;
   // Files actually written to disk by the server executor, for an honest log.
   appliedFiles?: string[];
+  // Set true when no real deploy preview was produced (offline / GitHub off).
+  previewSimulated?: boolean;
+  previewNote?: string;
 }
 
 export function createCommand(
@@ -142,19 +145,41 @@ export function applyAction(
 
     case "preview": {
       expect(cmd, "planned", "create preview");
-      const branchName =
-        ctx.branchName ?? `cms/${cmd.intent.replace(/_/g, "-")}-${rid()}`;
-      const previewUrl =
-        ctx.previewUrl ??
-        `https://deploy-preview-${rid(4)}--the-garage.netlify.app`;
-      const applyMsg =
-        ctx.appliedFiles && ctx.appliedFiles.length > 0
-          ? `Wrote ${ctx.appliedFiles.length} file(s) on branch ${branchName}: ${ctx.appliedFiles.join(", ")}.`
-          : `Committed changes to branch ${branchName}.`;
-      let logs = withLog(cmd, logEntry("apply", applyMsg));
-      logs = [...logs, logEntry("build", "typecheck + build passed.")];
-      logs = [...logs, logEntry("preview", `Netlify preview ready at ${previewUrl}.`)];
-      return { ...cmd, branchName, previewUrl, status: "preview_ready", logs };
+
+      // Real preview ONLY when the server produced a real Netlify preview URL.
+      const isReal = ctx.previewSimulated !== true && Boolean(ctx.previewUrl);
+      if (isReal) {
+        const branchName = ctx.branchName ?? `cms/${cmd.intent.replace(/_/g, "-")}-${rid()}`;
+        const applyMsg =
+          ctx.appliedFiles && ctx.appliedFiles.length > 0
+            ? `Wrote ${ctx.appliedFiles.length} file(s) on branch ${branchName}: ${ctx.appliedFiles.join(", ")}.`
+            : `Committed changes to branch ${branchName}.`;
+        let logs = withLog(cmd, logEntry("apply", applyMsg));
+        logs = [...logs, logEntry("build", "typecheck + build passed.")];
+        logs = [...logs, logEntry("preview", `Netlify preview ready at ${ctx.previewUrl}.`)];
+        return {
+          ...cmd,
+          branchName,
+          previewUrl: ctx.previewUrl ?? null,
+          previewSimulated: false,
+          previewNote: undefined,
+          status: "preview_ready",
+          logs,
+        };
+      }
+
+      // Simulated: NO fake URL and NO false success logs — one honest line.
+      const note =
+        ctx.previewNote ?? "Preview gesimuleerd (demo) — er is geen echte deploy preview gemaakt.";
+      return {
+        ...cmd,
+        branchName: ctx.branchName ?? null,
+        previewUrl: null,
+        previewSimulated: true,
+        previewNote: note,
+        status: "preview_ready",
+        logs: withLog(cmd, logEntry("preview", "Gesimuleerd (demo) — niet echt gecommit of gedeployd.")),
+      };
     }
 
     case "approve": {

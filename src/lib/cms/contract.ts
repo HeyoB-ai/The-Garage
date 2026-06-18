@@ -80,6 +80,10 @@ export interface ApiCommand {
   branchName: string | null;
   previewUrl: string | null;
   prNumber: number | null;
+  // True when the "preview" step did not produce a real Netlify deploy preview
+  // (offline/demo, or GitHub not configured). previewNote explains why.
+  previewSimulated?: boolean;
+  previewNote?: string;
   plan: ChangePlan | null;
   logs: CommandLogEntry[];
   createdAt: string;

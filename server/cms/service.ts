@@ -425,17 +425,33 @@ async function runSideEffects(
       const previewUrl = deploy.enabled
         ? deploy.previewUrlForBranch(branch, pr.number)
         : undefined;
+      if (previewUrl) {
+        return {
+          ctx: { branchName: branch, previewUrl, appliedFiles: files.map((f) => f.path), previewSimulated: false },
+          prNumber,
+        };
+      }
+      // Committed for real, but no Netlify preview URL available.
       return {
-        ctx: { branchName: branch, previewUrl, appliedFiles: files.map((f) => f.path) },
+        ctx: {
+          branchName: branch,
+          appliedFiles: files.map((f) => f.path),
+          previewSimulated: true,
+          previewNote: "Wijziging gecommit, maar geen Netlify preview-URL beschikbaar (NETLIFY_SITE_NAME ontbreekt).",
+        },
         prNumber,
       };
     }
 
+    // No GitHub provider ⇒ no real commit/deploy. Be honest about it.
+    const note = "GitHub niet geconfigureerd (GITHUB_TOKEN/GITHUB_REPO ontbreekt) — preview gesimuleerd.";
     if (opts.allowLocalWrite) {
-      return { ctx: { appliedFiles: writeResolvedFiles(files).written }, prNumber };
+      return {
+        ctx: { appliedFiles: writeResolvedFiles(files).written, previewSimulated: true, previewNote: note },
+        prNumber,
+      };
     }
-    // No provider + no local write ⇒ machine generates a simulated branch/preview.
-    return { ctx: {}, prNumber };
+    return { ctx: { previewSimulated: true, previewNote: note }, prNumber };
   }
 
   if (action === "deploy") {
