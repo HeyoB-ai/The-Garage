@@ -12,9 +12,12 @@
   NODE_VERSION = "20"
 
 [functions]
-  node_bundler = "esbuild"
-  # Bundle the content the CMS function may read (FAQ append, opening hours).
-  included_files = ["content/**", "src/config/**"]
+  # Functions are PRE-BUNDLED to self-contained ESM by `npm run build:functions`
+  # (esbuild). We do NOT let Netlify's default bundler (nft) re-transpile our TS:
+  # nft mis-bundled the cms function (lost the default export -> "D.handler is not
+  # a function" 502s). Netlify just ships the generated netlify/functions/*.mjs.
+  # included_files supplies the content the function reads at runtime.
+  included_files = ["content/**", "src/config/**", "src/data.ts"]
 
 # --- API routes → serverless functions (must come BEFORE the SPA fallback) ---
 
