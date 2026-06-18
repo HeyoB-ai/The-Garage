@@ -12,10 +12,10 @@
  *   - OPENAI_API_KEY / OPENAI_MODEL (default gpt-4o-mini)
  *   - GEMINI_API_KEY / GEMINI_MODEL (default gemini-3.5-flash)
  *
- * OpenAI uses fetch (no extra dependency); Gemini uses @google/genai.
+ * Both providers are called via their REST API with fetch — no SDK, so the
+ * serverless function bundles cleanly to ESM (the @google/genai SDK pulls in
+ * google-auth-library, which uses a dynamic require that breaks an ESM bundle).
  */
-import { GoogleGenAI } from "@google/genai";
-
 type Provider = "openai" | "gemini";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -79,18 +79,25 @@ async function callGemini(prompt: string, system: string): Promise<string | null
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-  const ai = new GoogleGenAI({
-    apiKey: key,
-    httpOptions: { headers: { "User-Agent": "aistudio-build" } },
-  });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { systemInstruction: system, responseMimeType: "application/json" },
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
       });
-      return res.text ?? null;
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Gemini ${res.status}: ${body}`);
+      }
+      const data = await res.json();
+      const parts = data?.candidates?.[0]?.content?.parts;
+      return Array.isArray(parts) ? parts.map((p: any) => p?.text ?? "").join("") : null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (attempt < 3 && isTransient(msg)) {

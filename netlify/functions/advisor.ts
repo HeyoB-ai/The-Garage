@@ -4,9 +4,11 @@
  * Production home for the Gemini-powered on-site advisor that runs via Express
  * in dev (server.ts). Requires GEMINI_API_KEY in the Netlify site environment;
  * without it, returns 503 and the chat UI falls back to a "call us" message.
+ *
+ * Uses the Gemini REST API via fetch (no SDK) so the function bundles cleanly
+ * to ESM — the @google/genai SDK pulls in google-auth-library, whose dynamic
+ * require breaks an ESM serverless bundle.
  */
-import { GoogleGenAI } from "@google/genai";
-
 const SYSTEM_INSTRUCTION = `You are the AI automotive specialist for "The Garage Jávea" (located in Jávea, Alicante, Spain).
 Your goal is to provide reliable, professional, and friendly advice to premium car owners, enthusiasts, and expats living in or moving to Spain.
 The Garage Jávea excels in three primary services:
@@ -34,19 +36,27 @@ export default async (req: Request): Promise<Response> => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return json({ error: "AI advisor is not configured." }, 503);
 
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
   try {
-    const ai = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        contents: [{ role: "user", parts: [{ text: String(message) }] }],
+      }),
     });
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: message,
-      config: { systemInstruction: SYSTEM_INSTRUCTION },
-    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return json({ error: `Gemini ${res.status}: ${body}` }, 500);
+    }
+    const data = await res.json();
+    const parts = data?.candidates?.[0]?.content?.parts;
+    const reply = Array.isArray(parts) ? parts.map((p: any) => p?.text ?? "").join("") : "";
     return json({
       reply:
-        response.text ||
+        reply ||
         "I apologize, I could not synthesize a response. Please call our team directly for immediate assistance.",
     });
   } catch (err: any) {
