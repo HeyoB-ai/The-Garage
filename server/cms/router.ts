@@ -18,31 +18,31 @@ import { Router } from "express";
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
 import { analyzeText, runTransition } from "./service";
-import { store } from "./store";
+import { getStore } from "./stores";
 
 export const cmsRouter = Router();
 
 const ACTIONS: CommandAction[] = ["plan", "preview", "approve", "deploy", "cancel"];
 
-cmsRouter.post("/analyze", (req, res) => {
-  const { text, source } = req.body ?? {};
+cmsRouter.post("/analyze", async (req, res) => {
+  const { text, source, customerId } = req.body ?? {};
   if (!text || typeof text !== "string") {
     return res.status(400).json({ error: "Field 'text' is required." });
   }
   const command = analyzeText(text, source === "voice" ? "voice" : "text");
-  store.save(command);
+  await getStore().save(command, customerId ?? null);
   res.json({ command });
 });
 
 for (const action of ACTIONS) {
   cmsRouter.post(`/${action}`, async (req, res) => {
-    const command = (req.body ?? {}).command as ApiCommand | undefined;
-    if (!command || !command.id) {
+    const { command, customerId } = req.body ?? {};
+    if (!command || !(command as ApiCommand).id) {
       return res.status(400).json({ error: "Field 'command' is required." });
     }
     try {
       const next = await runTransition(command, action, { allowLocalWrite: true });
-      store.save(next);
+      await getStore().save(next, customerId ?? null);
       res.json({ command: next });
     } catch (err) {
       if (err instanceof TransitionError) {
@@ -54,12 +54,13 @@ for (const action of ACTIONS) {
   });
 }
 
-cmsRouter.get("/commands", (_req, res) => {
-  res.json({ commands: store.list() });
+cmsRouter.get("/commands", async (req, res) => {
+  const customerId = typeof req.query.customerId === "string" ? req.query.customerId : undefined;
+  res.json({ commands: await getStore().list({ customerId }) });
 });
 
-cmsRouter.get("/commands/:id", (req, res) => {
-  const command = store.get(req.params.id);
+cmsRouter.get("/commands/:id", async (req, res) => {
+  const command = await getStore().get(req.params.id);
   if (!command) return res.status(404).json({ error: "Command not found." });
   res.json({ command });
 });

@@ -4,8 +4,13 @@ A future Supabase (Postgres) database backs the AI-CMS for **multiple customer
 websites**. It stores who the customers are, which repo/site each maps to, every
 command they issue, a per-step log, and uploaded media.
 
-This is a proposal/scaffold — no database is wired yet. SQL below is
-illustrative and ready to adapt for a Supabase migration.
+**Status: implemented (step 5).** The runnable migration is
+`supabase/migrations/0001_ai_cms.sql` and the backend persists through
+`server/cms/stores/` (env-gated). To activate, create a Supabase project, run
+the migration, and set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (server-side
+only) in `.env.local` and in the Netlify site environment. Without them the
+backend uses an in-memory store. The tables below match the migration (the app
+also keeps the full command in an `ai_commands.data` jsonb column).
 
 ---
 

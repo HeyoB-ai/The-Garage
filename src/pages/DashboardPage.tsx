@@ -76,6 +76,25 @@ export default function DashboardPage() {
     setVoiceSupported(getSpeechRecognition() !== null);
   }, []);
 
+  // Load persisted command history (durable when a database is configured).
+  useEffect(() => {
+    let active = true;
+    cmsApi
+      .list()
+      .then((history) => {
+        if (active && history.length > 0) {
+          setCommands(history);
+          setMode("online");
+        }
+      })
+      .catch(() => {
+        /* no backend / no history — stay in current mode */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const submit = async (text: string, source: "text" | "voice") => {
     const trimmed = text.trim();
     if (!trimmed || analyzing) return;

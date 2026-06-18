@@ -11,6 +11,7 @@
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
 import { analyzeText, runTransition } from "../../server/cms/service";
+import { getStore } from "../../server/cms/stores";
 
 const ACTIONS = new Set<CommandAction>(["plan", "preview", "approve", "deploy", "cancel"]);
 
@@ -36,10 +37,19 @@ function resolveAction(req: Request): string {
 }
 
 export default async (req: Request): Promise<Response> => {
+  const store = getStore();
+
+  // History listing (GET /api/cms/commands).
+  if (req.method === "GET") {
+    const customerId = new URL(req.url).searchParams.get("customerId") ?? undefined;
+    return json({ commands: await store.list({ customerId }) });
+  }
+
   if (req.method !== "POST") return json({ error: "POST only." }, 405);
 
   const action = resolveAction(req);
   const body = await req.json().catch(() => ({} as any));
+  const customerId = body.customerId ?? null;
 
   try {
     if (action === "analyze") {
@@ -47,6 +57,7 @@ export default async (req: Request): Promise<Response> => {
         return json({ error: "Field 'text' is required." }, 400);
       }
       const command = analyzeText(body.text, body.source === "voice" ? "voice" : "text");
+      await store.save(command, customerId);
       return json({ command });
     }
 
@@ -58,6 +69,7 @@ export default async (req: Request): Promise<Response> => {
       const next = await runTransition(command, action as CommandAction, {
         allowLocalWrite: false,
       });
+      await store.save(next, customerId);
       return json({ command: next });
     }
 

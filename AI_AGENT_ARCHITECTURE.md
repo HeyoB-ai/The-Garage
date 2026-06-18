@@ -173,9 +173,16 @@ Deploy Preview, `deploy` merges it live, `cancel` closes it.
    final content used by both the local write and the GitHub commit. The parser
    extracts the FAQ question and opening-hour times from the instruction.
 
+✅ **Supabase persistence (step 5):** `server/cms/stores/` — a `CommandStore`
+   seam with `MemoryStore` and `SupabaseStore`, env-gated (`SUPABASE_URL` +
+   `SUPABASE_SERVICE_ROLE_KEY`). Commands persist to `ai_commands` (typed columns
+   + full-command jsonb) and logs mirror to `command_logs`; the dashboard loads
+   durable history on mount via `GET /api/cms/commands`. Migration:
+   `supabase/migrations/0001_ai_cms.sql`. No creds ⇒ in-memory (unchanged).
+
 ⬜ Remaining: generators for structural intents (sections, pages, menu items —
-   require approval); swap the in-memory store for Supabase; swap placeholder
-   copy for a real LLM (Claude/Gemini) draft; uploads, auth, prerender SEO.
+   require approval); swap placeholder copy for a real LLM (Claude/Gemini) draft;
+   media uploads (media_assets + storage), customer/user auth, prerender SEO.
 
 ### Activating real GitHub/Netlify (operator setup)
 
