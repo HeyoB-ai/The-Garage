@@ -80,7 +80,7 @@ export default function AdvisorChat() {
               <div>
                 <h4 className="text-sm font-bold text-white flex items-center space-x-1">
                   <span>AI Advisor</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" title="Officially Verified" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" aria-label="Officially Verified" />
                 </h4>
                 <span className="text-[10px] text-amber-400 font-mono font-bold tracking-wider">The Garage Jávea</span>
               </div>

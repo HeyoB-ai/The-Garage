@@ -1,0 +1,2 @@
+# Drop news images here. Reference them in a news JSON file as "/images/news/your-file.jpg".
+# Remote URLs (e.g. Unsplash) are also allowed in the "image" field.

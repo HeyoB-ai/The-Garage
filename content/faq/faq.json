@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "faq-import-duration",
+      "question": "How long does importing a vehicle to Spain take?",
+      "answer": "On average, the entire physical journey (from transit collection to mounting Spanish plates in Javea) takes 10 to 14 business days. We coordinate trailer pickups, technical sheets, ITV passes, tax collections, and final DGT log sheets.",
+      "order": 1,
+      "visible": true
+    },
+    {
+      "id": "faq-warranty",
+      "question": "Is my manufacturer warranty preserved at The Garage?",
+      "answer": "Absolutely. We conform to EU Block Exemption directives, meaning our workshop preserves full factory warranties. We log digital services directly to Audi, Porsche, BMW, and AMG servers.",
+      "order": 2,
+      "visible": true
+    },
+    {
+      "id": "faq-emissions-tax",
+      "question": "What are the emissions tax rates for registration?",
+      "answer": "The Spanish registration tax (Impuesto de Matriculación) is CO2-dependent. Vehicles under 120g/km pay 0%. Between 120g/km and 200g/km, tax rates scale between 4.75% and 14.75% of Spain's depreciated Hacienda rating.",
+      "order": 3,
+      "visible": true
+    }
+  ]
+}

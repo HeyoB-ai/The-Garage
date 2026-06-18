@@ -1,0 +1,23 @@
+{
+  "_comment": "TEMPLATE / MODEL ONLY. This file documents the 'page' content model for the AI-CMS. It is not rendered yet. To create a real standalone page, copy this shape, give it a unique slug, and an AI agent (or developer) can wire it to a route. Sections reference reusable section components by 'type'.",
+  "title": "About The Garage",
+  "slug": "about",
+  "metaTitle": "About The Garage Jávea",
+  "metaDescription": "Who we are: a multilingual premium automotive partner on the Costa Blanca.",
+  "published": false,
+  "sections": [
+    {
+      "type": "hero",
+      "props": {
+        "heading": "Worry-Free Automotive Excellence on the Costa Blanca",
+        "subheading": "Dutch and German technical precision combined with Spanish warmth."
+      }
+    },
+    {
+      "type": "richText",
+      "props": {
+        "body": "## Our story\n\nBased in the prestigious Marina Alta region, The Garage Jávea combines precision engineering with a fully managed, hands-off concierge experience."
+      }
+    }
+  ]
+}

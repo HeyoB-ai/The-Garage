@@ -304,7 +304,7 @@ export default function Reviews() {
                   <h4 className="font-semibold text-sm text-neutral-150 flex items-center space-x-1.5">
                     <span>{rev.name}</span>
                     {rev.verified && (
-                      <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" title="Verified Client" />
+                      <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" aria-label="Verified Client" />
                     )}
                   </h4>
                   {rev.carModel && (

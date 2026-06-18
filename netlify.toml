@@ -1,0 +1,23 @@
+# Netlify configuration for The Garage (static SPA deploy).
+#
+# This deploys the Vite-built front-end in /dist as a static site. Client-side
+# routes (/nieuws, /nieuws/:slug, /beheer) are handled by the SPA fallback below.
+#
+# NOTE: the Express endpoint /api/advisor (Gemini) is NOT served by this static
+# deploy. To keep the AI advisor working on Netlify, port it to a Netlify
+# Function (see AI_AGENT_ARCHITECTURE.md → "Advisor API on Netlify"). Until then
+# the chat falls back gracefully to a "call us" message.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: every unknown path serves index.html so the React router can
+# resolve it client-side.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
