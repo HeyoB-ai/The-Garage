@@ -19,8 +19,8 @@
     "defaultDescription": "Your premier multilingual partner on the Costa Blanca for high-performance maintenance, turnkey import/export, and certified vehicle sales."
   },
   "theme": {
-    "accent": "#f59e0b",
-    "accentStrong": "#d97706",
+    "accent": "#22c55e",
+    "accentStrong": "#1ca24d",
     "background": "#0a0a0a",
     "font": "ui-sans-serif, system-ui, sans-serif",
     "logo": null
