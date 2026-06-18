@@ -26,7 +26,7 @@ import {
 } from "../../src/lib/cms/machine";
 import type { TransitionContext } from "../../src/lib/cms/machine";
 import { store } from "./store";
-import { writePlanFiles } from "./executor";
+import { resolvePlanFiles, writePlanFiles } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
 
 export const cmsRouter = Router();
@@ -61,9 +61,8 @@ async function runSideEffects(
   if (action === "preview") {
     const git = getGitProvider();
     const deploy = getDeployProvider();
-    const files = (cmd.plan?.files ?? [])
-      .filter((f) => f.preview)
-      .map((f) => ({ path: f.path, content: f.preview as string }));
+    // Final, guardrailed file contents (createFile + read-modify-write updates).
+    const files = resolvePlanFiles(cmd.plan);
 
     if (git.enabled && files.length > 0) {
       const branch = `cms/${cmd.intent.replace(/_/g, "-")}-${shortId()}`;

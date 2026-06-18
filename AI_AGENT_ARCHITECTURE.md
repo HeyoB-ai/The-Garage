@@ -153,9 +153,16 @@ hosts the `/api/cms/*` routes above. Until then the chat fails gracefully.
    With no credentials it falls back to the local executor + simulated preview —
    nothing outward-facing happens without explicit configuration.
 
-⬜ Remaining: generators for the other intents (FAQ, opening hours, sections);
-   swap the in-memory store for Supabase; swap placeholder copy for a real LLM
-   (Claude/Gemini) draft; uploads, auth, prerender SEO — all designed above.
+✅ **More content generators (step 4):** `add_faq` (`executors/faq.ts`) and
+   `update_opening_hours` (`executors/openingHours.ts`). These are *updates*, so
+   the executor is now mutation-driven (`createFile` / `appendFaq` /
+   `updateOpeningHours`) with read-modify-write; `resolvePlanFiles` produces the
+   final content used by both the local write and the GitHub commit. The parser
+   extracts the FAQ question and opening-hour times from the instruction.
+
+⬜ Remaining: generators for structural intents (sections, pages, menu items —
+   require approval); swap the in-memory store for Supabase; swap placeholder
+   copy for a real LLM (Claude/Gemini) draft; uploads, auth, prerender SEO.
 
 ### Activating real GitHub/Netlify (operator setup)
 

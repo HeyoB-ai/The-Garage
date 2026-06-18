@@ -14,6 +14,8 @@ import type { ChangePlan, PlannedFileChange } from "./contract";
 import type { ChangeType, IntentName } from "./intent";
 import { slugify } from "./slug";
 import { buildNewsArticleFile } from "./executors/news";
+import { buildFaqEntry } from "./executors/faq";
+import { buildOpeningHours } from "./executors/openingHours";
 
 export interface PlanInput {
   intent: IntentName;
@@ -60,6 +62,7 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
         action: "create",
         description: `New news article "${generated.article.title}"`,
         preview: generated.content, // the exact file that will be written
+        mutation: { kind: "createFile", content: generated.content },
       });
       if (needsImage) {
         files.push({
@@ -72,22 +75,37 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
       summary = `Add a news article "${generated.article.title}" to /content/news.`;
       break;
     }
-    case "add_faq":
+    case "add_faq": {
+      const entry = buildFaqEntry(str(fields, "question") ?? "");
       files.push({
         path: "content/faq/faq.json",
         action: "update",
-        description: "Append a new FAQ entry",
+        description: `Append FAQ "${entry.question}"`,
+        preview: JSON.stringify(entry, null, 2),
+        mutation: { kind: "appendFaq", entry },
       });
-      summary = "Add a new question & answer to the FAQ.";
+      summary = `Add a new FAQ "${entry.question}".`;
       break;
-    case "update_opening_hours":
+    }
+    case "update_opening_hours": {
+      const from = str(fields, "from");
+      const to = str(fields, "to");
+      const hours = buildOpeningHours(from, to);
+      if (!hours.weekdays) {
+        warnings.push("No clear opening times found — please state them like '09:00 - 17:00'.");
+      }
       files.push({
         path: "src/config/site.json",
         action: "update",
         description: "Update openingHours fields",
+        preview: JSON.stringify(hours, null, 2),
+        mutation: { kind: "updateOpeningHours", ...hours },
       });
-      summary = "Update the opening hours in the site configuration.";
+      summary = hours.weekdays
+        ? `Update weekday opening hours to ${from} - ${to}.`
+        : "Update opening hours (times unclear — needs confirmation).";
       break;
+    }
     case "change_image":
       files.push({
         path: "public/images/...",

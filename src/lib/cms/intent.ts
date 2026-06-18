@@ -82,6 +82,32 @@ function extractTitle(text: string): string | undefined {
 }
 
 /**
+ * Pull two clock times from a phrase like "...naar 09:00 - 17:00" or
+ * "...from 9.00 to 17.30". Returns normalised "HH:MM" strings.
+ */
+function extractTimes(text: string): { from?: string; to?: string } {
+  const m = text.match(
+    /(\d{1,2}[:.]\d{2})\s*(?:-|–|—|tot|t\/m|to|until|en)\s*(\d{1,2}[:.]\d{2})/i
+  );
+  if (!m) return {};
+  const norm = (s: string) => {
+    const [h, min] = s.replace(".", ":").split(":");
+    return `${h.padStart(2, "0")}:${min}`;
+  };
+  return { from: norm(m[1]), to: norm(m[2]) };
+}
+
+/**
+ * Pull a candidate question for a FAQ from the instruction: prefer text after a
+ * colon, otherwise the topic after "over"/"about".
+ */
+function extractQuestion(text: string): string | undefined {
+  const colon = text.match(/:\s*(.+)$/);
+  if (colon) return colon[1].replace(/[.]+$/, "").trim();
+  return extractTitle(text);
+}
+
+/**
  * Synchronous heuristic classifier. Order matters: more specific patterns
  * (e.g. "news SECTION" = structural) are checked before broader ones.
  */
@@ -135,10 +161,12 @@ export function classify(rawText: string): ParsedCommand {
       needsImage,
     });
   }
-  if (has(text, "openingstijd", "opening hour", "opening time", "openingsuren"))
-    return build("update_opening_hours", 0.85, {});
+  if (has(text, "openingstijd", "opening hour", "opening time", "openingsuren")) {
+    const times = extractTimes(rawText);
+    return build("update_opening_hours", 0.85, times);
+  }
   if (has(text, "faq", "veelgestelde", "vraag en antwoord", "frequently asked"))
-    return build("add_faq", 0.8, {});
+    return build("add_faq", 0.8, { question: extractQuestion(rawText) });
   if (has(text, "foto", "afbeelding", "image", "picture") &&
       has(text, "verander", "wijzig", "vervang", "change", "replace", "update"))
     return build("change_image", 0.8, { needsImage: true });

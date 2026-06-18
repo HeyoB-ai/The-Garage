@@ -5,6 +5,15 @@
  * into; keep it additive.
  */
 import type { ChangeType, IntentName } from "./intent";
+import type { FaqItem } from "../../types";
+
+// A structured content mutation the server executor knows how to apply. Keeps
+// generation pure (produce the value) while the executor handles the
+// read-modify-write against real files. Additive — add new kinds as needed.
+export type Mutation =
+  | { kind: "createFile"; content: string }
+  | { kind: "appendFaq"; entry: FaqItem }
+  | { kind: "updateOpeningHours"; weekdays?: string; weekend?: string };
 
 export type CommandStatus =
   | "analyzed"
@@ -31,8 +40,12 @@ export interface PlannedFileChange {
   action: "create" | "update" | "delete";
   description: string;
   // Generated file contents, when the planner can already produce them (e.g.
-  // a news article). Present ⇒ the server executor will write exactly this.
+  // a news article). For display in the dashboard.
   preview?: string;
+  // Structured instruction the server executor applies to produce the final
+  // file. createFile = full bytes; appendFaq / updateOpeningHours = read-modify-
+  // write against the existing file.
+  mutation?: Mutation;
 }
 
 export interface ChangePlan {
