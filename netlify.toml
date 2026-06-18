@@ -19,9 +19,12 @@
 # --- API routes → serverless functions (must come BEFORE the SPA fallback) ---
 
 # AI-CMS backend (analyze / plan / preview / approve / deploy / cancel).
+# Splat-less on purpose: Netlify proxy-rewrites resolve the function root but
+# NOT a function subpath, while preserving the original request path — the
+# function reads the action from that path.
 [[redirects]]
   from = "/api/cms/*"
-  to = "/.netlify/functions/cms/:splat"
+  to = "/.netlify/functions/cms"
   status = 200
 
 # On-site Gemini advisor.

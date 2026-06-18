@@ -21,11 +21,24 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// The action is the path segment after .../cms/ . Netlify proxy-rewrites a
+// splat-less redirect while preserving the ORIGINAL request path, so we find
+// the first known action token in the path (robust to both /api/cms/<action>
+// and the direct /.netlify/functions/cms/<action> form).
+const ALL_ACTIONS = new Set<string>(["analyze", ...ACTIONS]);
+
+function resolveAction(req: Request): string {
+  const segments = new URL(req.url).pathname.split("/").filter(Boolean);
+  for (let i = segments.length - 1; i >= 0; i--) {
+    if (ALL_ACTIONS.has(segments[i])) return segments[i];
+  }
+  return segments[segments.length - 1] ?? "";
+}
+
 export default async (req: Request): Promise<Response> => {
   if (req.method !== "POST") return json({ error: "POST only." }, 405);
 
-  const segments = new URL(req.url).pathname.split("/").filter(Boolean);
-  const action = segments[segments.length - 1];
+  const action = resolveAction(req);
   const body = await req.json().catch(() => ({} as any));
 
   try {
