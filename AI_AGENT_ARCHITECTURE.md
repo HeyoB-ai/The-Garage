@@ -143,7 +143,12 @@ Deploy Preview, `deploy` merges it live, `cancel` closes it.
 ✅ News module: overview (`/nieuws`), detail (`/nieuws/:slug`), example article.
 ✅ Dashboard scaffold: `/beheer` — text + voice input, command history, status
    stepper, preview/approve/cancel buttons (pipeline simulated client-side).
-✅ Intent parser mock: `src/lib/cms/intent.ts` (heuristic, async, LLM-swap ready).
+✅ **LLM planner with site context:** `planCommand` (server) builds a compact
+   `buildSiteSnapshot()` (news, stock, FAQ, sections, pages, opening hours, theme)
+   and sends `{instruction, snapshot}` to the LLM, which returns validated
+   operations (`server/cms/operations.ts`) mapped to the existing intents/
+   executors, plus `clarify` / `unsupported` steering. Falls back to the keyword
+   classifier (`src/lib/cms/intent.ts`) when no LLM key is set.
 ✅ **Backend API (step 1):** `/api/cms/{analyze,plan,preview,approve,deploy,cancel}`
    + `GET /commands` on the Express server (`server/cms/`), backed by an
    in-memory store. Logic lives in a shared pure state machine

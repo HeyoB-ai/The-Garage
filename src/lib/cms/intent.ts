@@ -21,6 +21,9 @@ export type IntentName =
   | "change_image"
   | "create_preview"
   | "approve_deploy"
+  // Steering intents from the LLM planner (no pipeline action of their own).
+  | "clarify"
+  | "unsupported"
   | "unknown";
 
 // Whether a change touches only content or also the site's structure.
@@ -52,7 +55,11 @@ const CONTENT_INTENTS: IntentName[] = [
 
 const WORKFLOW_INTENTS: IntentName[] = ["create_preview", "approve_deploy"];
 
-function changeTypeFor(intent: IntentName): ChangeType {
+export function requiresApprovalFor(intent: IntentName): boolean {
+  return STRUCTURAL_INTENTS.includes(intent);
+}
+
+export function changeTypeFor(intent: IntentName): ChangeType {
   if (STRUCTURAL_INTENTS.includes(intent)) return "structural";
   if (CONTENT_INTENTS.includes(intent)) return "content";
   if (WORKFLOW_INTENTS.includes(intent)) return "workflow";
@@ -208,5 +215,7 @@ export const INTENT_LABELS: Record<IntentName, string> = {
   change_image: "Change image",
   create_preview: "Create preview",
   approve_deploy: "Approve & deploy",
-  unknown: "Unrecognised request",
+  clarify: "Needs clarification",
+  unsupported: "Not supported",
+  unknown: "Needs clarification",
 };

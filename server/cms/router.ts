@@ -17,7 +17,7 @@
 import { Router } from "express";
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
-import { analyzeText, checkPreviewReady, runTransition } from "./service";
+import { checkPreviewReady, planCommand, runTransition } from "./service";
 import { getStore } from "./stores";
 
 export const cmsRouter = Router();
@@ -29,7 +29,7 @@ cmsRouter.post("/analyze", async (req, res) => {
   if (!text || typeof text !== "string") {
     return res.status(400).json({ error: "Field 'text' is required." });
   }
-  const command = analyzeText(text, source === "voice" ? "voice" : "text");
+  const command = await planCommand(text, source === "voice" ? "voice" : "text");
   await getStore().save(command, customerId ?? null);
   res.json({ command });
 });

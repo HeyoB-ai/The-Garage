@@ -10,7 +10,7 @@
  */
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
 import { TransitionError } from "../../src/lib/cms/machine";
-import { analyzeText, checkPreviewReady, runTransition } from "../../server/cms/service";
+import { checkPreviewReady, planCommand, runTransition } from "../../server/cms/service";
 import { getStore } from "../../server/cms/stores";
 
 const ACTIONS = new Set<CommandAction>(["plan", "preview", "approve", "deploy", "cancel"]);
@@ -56,7 +56,7 @@ export default async (req: Request): Promise<Response> => {
       if (!body.text || typeof body.text !== "string") {
         return json({ error: "Field 'text' is required." }, 400);
       }
-      const command = analyzeText(body.text, body.source === "voice" ? "voice" : "text");
+      const command = await planCommand(body.text, body.source === "voice" ? "voice" : "text");
       await store.save(command, customerId);
       return json({ command });
     }

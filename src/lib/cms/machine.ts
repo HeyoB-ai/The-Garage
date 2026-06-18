@@ -16,6 +16,7 @@ import type {
   CommandStatus,
 } from "./contract";
 import { classify } from "./intent";
+import type { ChangeType, IntentName } from "./intent";
 import { buildPlan } from "./planner";
 
 function nowIso(): string {
@@ -63,6 +64,44 @@ export function createCommand(
         `Interpreted as "${parsed.intent}" (${Math.round(parsed.confidence * 100)}% confidence).`
       ),
     ],
+    createdAt: nowIso(),
+    approvedAt: null,
+    deployedAt: null,
+  };
+}
+
+/**
+ * Build a command from an already-decided intent + fields (e.g. from the LLM
+ * planner) instead of the keyword classifier. Same ApiCommand shape as
+ * createCommand, so the rest of the pipeline is unchanged.
+ */
+export function createCommandFrom(
+  text: string,
+  source: "text" | "voice",
+  opts: {
+    intent: IntentName;
+    changeType: ChangeType;
+    requiresApproval: boolean;
+    fields: Record<string, unknown>;
+    understood?: string;
+  }
+): ApiCommand {
+  return {
+    id: `cmd_${Date.now().toString(36)}_${rid()}`,
+    inputText: text,
+    transcriptSource: source,
+    intent: opts.intent,
+    confidence: 1,
+    changeType: opts.changeType,
+    requiresApproval: opts.requiresApproval,
+    fields: opts.fields,
+    status: "analyzed",
+    branchName: null,
+    previewUrl: null,
+    prNumber: null,
+    plan: null,
+    understood: opts.understood,
+    logs: [logEntry("analyze", opts.understood || `Interpreted as "${opts.intent}".`)],
     createdAt: nowIso(),
     approvedAt: null,
     deployedAt: null,

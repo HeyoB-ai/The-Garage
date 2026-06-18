@@ -160,6 +160,50 @@ export async function draftNews(
   };
 }
 
+/* ---------------------------------------------------------------------- *
+ * LLM planner: free-text instruction + site snapshot -> operations.
+ * ---------------------------------------------------------------------- */
+
+const PLANNER_SYSTEM =
+  `You are the CMS planner for a website. Translate the user's instruction into a list of ` +
+  `operations from the CATALOG below, referencing real target ids from the SITE SNAPSHOT when ` +
+  `editing existing items. Use plain language and the SAME language as the user for any ` +
+  `human-facing text. If the instruction is ambiguous or you need more info, return a single ` +
+  `"clarify" operation with a friendly plain-language question. If it genuinely cannot be done ` +
+  `with these operations, return a single "unsupported" operation with a friendly explanation. ` +
+  `Respond with STRICT JSON only — no prose, no code fences.\n\n` +
+  `CATALOG (operation "type" and allowed fields):\n` +
+  `- add_news { title?, needsImage?, sourceUrl? }            // create a news article\n` +
+  `- edit_text { targetId, field?, value? }                  // edit text of a snapshot item\n` +
+  `- update_opening_hours { from?, to? }                     // change opening hours (HH:MM)\n` +
+  `- add_faq { question, answer? }                           // add a FAQ entry\n` +
+  `- add_section { sectionType, menuLabel? }                 // add a new section (structural)\n` +
+  `- clarify { question }                                    // ask the user a question\n` +
+  `- unsupported { message }                                 // explain why it can't be done\n\n` +
+  `Return JSON: {"understood": string (one short sentence in the user's language summarising ` +
+  `what you will do), "operations": [ { "type": ..., ...fields } ]}.`;
+
+export interface PlannerResult {
+  understood?: string;
+  operations: unknown;
+}
+
+/** Plan an instruction against the site snapshot. Null on failure (caller falls back). */
+export async function planInstruction(
+  instruction: string,
+  snapshot: unknown
+): Promise<PlannerResult | null> {
+  const data = await generateJson(
+    `Instruction: "${instruction}"\n\nSITE SNAPSHOT:\n${JSON.stringify(snapshot)}`,
+    PLANNER_SYSTEM
+  );
+  if (!data || typeof data !== "object") return null;
+  return {
+    understood: typeof data.understood === "string" ? data.understood : undefined,
+    operations: data.operations,
+  };
+}
+
 export async function draftFaqAnswer(question: string): Promise<string | null> {
   const data = await generateJson(
     `Write a concise, helpful answer (2-4 sentences, plain text) to this FAQ question ` +

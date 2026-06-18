@@ -9,12 +9,15 @@
  * source of truth for command state and sends the whole command with each call.
  */
 import type { ApiCommand, CommandAction } from "../../src/lib/cms/contract";
-import { applyAction, createCommand } from "../../src/lib/cms/machine";
+import { applyAction, createCommand, createCommandFrom } from "../../src/lib/cms/machine";
 import type { TransitionContext } from "../../src/lib/cms/machine";
+import { changeTypeFor, requiresApprovalFor, type IntentName } from "../../src/lib/cms/intent";
 import { resolvePlanFiles, writeResolvedFiles, type ResolvedFile } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
-import { draftFaqAnswer, draftNews, fetchArticleText, llmEnabled } from "./llm";
+import { draftFaqAnswer, draftNews, fetchArticleText, llmEnabled, planInstruction } from "./llm";
 import { DEFAULT_IMAGE } from "../../src/lib/cms/executors/news";
+import { buildSiteSnapshot } from "./snapshot";
+import { pickOperation, validateOperations } from "./operations";
 
 // An image uploaded from the dashboard (a data URL + original filename).
 export interface UploadedImage {
@@ -87,6 +90,59 @@ function prBody(cmd: ApiCommand): string {
 
 export function analyzeText(text: string, source: "text" | "voice"): ApiCommand {
   return createCommand(text, source);
+}
+
+/**
+ * Analyse an instruction. With an LLM key configured, uses the planner (free
+ * text + site snapshot -> validated operation) and supports clarify/unsupported.
+ * Without a key (or on any failure), falls back to the keyword classifier. The
+ * returned ApiCommand has the same shape, so the rest of the pipeline is
+ * unchanged.
+ */
+export async function planCommand(text: string, source: "text" | "voice"): Promise<ApiCommand> {
+  if (!llmEnabled()) return createCommand(text, source); // keyword fallback (no key)
+
+  try {
+    const snapshot = buildSiteSnapshot();
+    const result = await planInstruction(text, snapshot);
+    if (result) {
+      const op = pickOperation(validateOperations(result.operations));
+      if (op) {
+        const intent = op.type as IntentName;
+        const fields: Record<string, unknown> = { ...op.fields };
+
+        // Robustness for add_news: derive image/source hints from the raw text.
+        if (intent === "add_news") {
+          if (fields.needsImage == null) {
+            fields.needsImage = /foto|afbeelding|image|picture|plaatje/i.test(text);
+          }
+          if (!fields.sourceUrl) {
+            const m = text.match(/https?:\/\/[^\s)<>"']+/i);
+            if (m) fields.sourceUrl = m[0];
+          }
+        }
+
+        return createCommandFrom(text, source, {
+          intent,
+          changeType: changeTypeFor(intent),
+          requiresApproval: requiresApprovalFor(intent),
+          fields,
+          understood: result.understood,
+        });
+      }
+      // Model replied but produced no usable operation → friendly clarify.
+      return createCommandFrom(text, source, {
+        intent: "clarify",
+        changeType: "unknown",
+        requiresApproval: false,
+        fields: { question: "Sorry, I didn't fully understand that. Could you rephrase what you'd like to change?" },
+        understood: result.understood,
+      });
+    }
+  } catch (err) {
+    console.error("LLM planner failed; falling back to keyword classifier:", err);
+  }
+  return createCommand(text, source); // safe fallback on any failure
 }
 
 interface SideEffectOptions {

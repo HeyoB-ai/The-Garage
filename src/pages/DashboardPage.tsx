@@ -369,6 +369,13 @@ function CommandCard({
   const canUpload = needsImage && (record.status === "analyzed" || record.status === "planned");
   const previewBuilding = previewState === "building";
   const previewTimedOut = previewState === "timeout";
+  // Steering intents: show a friendly message, no pipeline / buttons.
+  const isInfo =
+    record.intent === "clarify" || record.intent === "unsupported" || record.intent === "unknown";
+  const infoText =
+    record.intent === "unsupported"
+      ? String(record.fields?.message ?? "Sorry, that isn't something I can do yet.")
+      : String(record.fields?.question ?? "Sorry, I didn't fully understand that — could you rephrase?");
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -388,21 +395,41 @@ function CommandCard({
           <div>
             <p className="text-sm text-white font-medium leading-snug">{record.inputText}</p>
             <p className="text-[11px] font-mono text-neutral-500 mt-1">
-              {INTENT_LABELS[record.intent]} · {(record.confidence * 100).toFixed(0)}% confidence
+              {record.understood || INTENT_LABELS[record.intent]}
             </p>
           </div>
         </div>
-        <span
-          className={`shrink-0 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded border ${
-            structural
-              ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
-              : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-          }`}
-        >
-          {structural ? "Structural · approval" : record.changeType}
-        </span>
+        {!isInfo && (
+          <span
+            className={`shrink-0 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded border ${
+              structural
+                ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+            }`}
+          >
+            {structural ? "Structural · approval" : record.changeType}
+          </span>
+        )}
       </div>
 
+      {isInfo ? (
+        <div
+          className={`flex items-start gap-3 rounded-lg p-4 text-xs leading-relaxed border ${
+            record.intent === "unsupported"
+              ? "bg-neutral-950 border-neutral-800 text-neutral-300"
+              : "bg-amber-500/10 border-amber-500/30 text-amber-100/90"
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+          <div>
+            <p>{infoText}</p>
+            <p className="text-[11px] text-neutral-500 mt-2">
+              Type a new instruction above to continue.
+            </p>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Plan */}
       {record.plan && (
         <div className="bg-neutral-950 border border-neutral-800 rounded-lg p-4 mb-4">
@@ -571,6 +598,8 @@ function CommandCard({
             ))}
           </ul>
         </details>
+      )}
+      </>
       )}
     </div>
   );

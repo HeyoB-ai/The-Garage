@@ -73,6 +73,9 @@ export interface ApiCommand {
   changeType: ChangeType;
   requiresApproval: boolean;
   fields: Record<string, unknown>;
+  // One-sentence summary of what the LLM planner understood (preferred over the
+  // confidence number in the UI). Undefined for the keyword fallback.
+  understood?: string;
   status: CommandStatus;
   branchName: string | null;
   previewUrl: string | null;
