@@ -1,0 +1,11 @@
+{
+  "items": [
+    { "id": "home", "label": "Home", "type": "section", "target": "home", "order": 1, "visible": true },
+    { "id": "expertise", "label": "Our Expertise", "type": "section", "target": "expertise", "order": 2, "visible": true },
+    { "id": "import", "label": "Import & Export", "type": "section", "target": "import", "order": 3, "visible": true },
+    { "id": "portfolio", "label": "Portfolio", "type": "section", "target": "portfolio", "order": 4, "visible": true },
+    { "id": "verkoop", "label": "Exclusive Stock", "type": "section", "target": "verkoop", "order": 5, "visible": true },
+    { "id": "reviews", "label": "Client Stories", "type": "section", "target": "reviews", "order": 6, "visible": true },
+    { "id": "news", "label": "Nieuws", "type": "route", "href": "/nieuws", "order": 7, "visible": true }
+  ]
+}

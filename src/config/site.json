@@ -1,0 +1,24 @@
+{
+  "name": "The Garage Jávea",
+  "shortName": "The Garage",
+  "locale": "en",
+  "tagline": "Certified Supercar Maintenance & Turnkey Import/Export Specialist · Costa Blanca",
+  "contact": {
+    "phone": "+34 965 020 442",
+    "email": "info@thegaragejavea.com",
+    "address": "Carrer de Augusta, Bloque 4, 03730 Jávea, Alicante, Spain",
+    "languages": "NL • EN • DE • ES"
+  },
+  "openingHours": {
+    "weekdays": "Monday to Friday: 08:30 - 18:00",
+    "weekend": "Saturday & Sunday: By Appointment Only"
+  },
+  "seo": {
+    "titleTemplate": "%s · The Garage Jávea",
+    "defaultTitle": "The Garage Jávea · Premium Car Maintenance, Import & Sales",
+    "defaultDescription": "Your premier multilingual partner on the Costa Blanca for high-performance maintenance, turnkey import/export, and certified vehicle sales."
+  },
+  "theme": {
+    "accent": "amber"
+  }
+}
