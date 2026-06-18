@@ -7,6 +7,10 @@
  */
 import type { ApiCommand, CommandAction, CommandResponse } from "./contract";
 
+// The backend is stateless (it runs on serverless Functions in production), so
+// the client is the source of truth and sends the full command with each
+// transition rather than just an id.
+
 const BASE = "/api/cms";
 
 async function postCommand(path: string, body: unknown): Promise<ApiCommand> {
@@ -27,8 +31,8 @@ export const cmsApi = {
   analyze: (text: string, source: "text" | "voice" = "text") =>
     postCommand("/analyze", { text, source }),
 
-  transition: (commandId: string, action: CommandAction) =>
-    postCommand(`/${action}`, { commandId }),
+  transition: (command: ApiCommand, action: CommandAction) =>
+    postCommand(`/${action}`, { command }),
 
   async list(): Promise<ApiCommand[]> {
     const res = await fetch(`${BASE}/commands`);

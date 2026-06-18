@@ -113,13 +113,26 @@ crawler-grade SEO, add a **prerender step** at build time (e.g. `vite-plugin-ssg
 or Netlify prerendering) so each route ships static HTML. This is a future
 enhancement and intentionally not added yet to avoid over-engineering.
 
-## 6. Advisor API on Netlify
+## 6. Serverless backend on Netlify (implemented)
 
-`server.ts` exposes `POST /api/advisor` (Gemini) in dev. The static Netlify
-deploy does not run Express, so to keep the AI advisor working in production,
-port that handler to a **Netlify Function** (`netlify/functions/advisor.ts`) and
-add a redirect `/api/advisor -> /.netlify/functions/advisor`. The same pattern
-hosts the `/api/cms/*` routes above. Until then the chat fails gracefully.
+The backend runs as **Netlify Functions** in production (`netlify/functions/`):
+`cms.ts` serves `/api/cms/*` and `advisor.ts` serves `/api/advisor`, wired via
+redirects in `netlify.toml` (before the SPA fallback). In dev the same logic is
+served by Express (`server.ts`); both call the shared stateless service
+(`server/cms/service.ts`).
+
+Because Functions are stateless, the command flow is **client-authoritative**:
+the dashboard holds each command and sends the full object back with every
+transition (no server-side store needed). Local filesystem writes are disabled
+on the Function (read-only runtime) — real changes happen through the GitHub
+provider when credentials are set; otherwise the pipeline runs simulated.
+
+**To make the live CMS create real content**, set these as environment variables
+on the Netlify site (Site settings → Environment variables) — never in the repo:
+`GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_DEFAULT_BRANCH`, `NETLIFY_SITE_NAME`
+(= `voicecms`), and `GEMINI_API_KEY` for the advisor. With those set, `preview`
+commits the generated content to a branch + opens a PR, Netlify builds the
+Deploy Preview, `deploy` merges it live, `cancel` closes it.
 
 ---
 

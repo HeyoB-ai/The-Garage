@@ -1,12 +1,8 @@
-# Netlify configuration for The Garage (static SPA deploy).
+# Netlify configuration for The Garage.
 #
-# This deploys the Vite-built front-end in /dist as a static site. Client-side
-# routes (/nieuws, /nieuws/:slug, /beheer) are handled by the SPA fallback below.
-#
-# NOTE: the Express endpoint /api/advisor (Gemini) is NOT served by this static
-# deploy. To keep the AI advisor working on Netlify, port it to a Netlify
-# Function (see AI_AGENT_ARCHITECTURE.md → "Advisor API on Netlify"). Until then
-# the chat falls back gracefully to a "call us" message.
+# Deploys the Vite-built front-end in /dist as a static site, plus serverless
+# Functions for the backend API. Client-side routes (/nieuws, /nieuws/:slug,
+# /beheer) are handled by the SPA fallback at the bottom.
 
 [build]
   command = "npm run build"
@@ -15,8 +11,26 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA fallback: every unknown path serves index.html so the React router can
-# resolve it client-side.
+[functions]
+  node_bundler = "esbuild"
+  # Bundle the content the CMS function may read (FAQ append, opening hours).
+  included_files = ["content/**", "src/config/**"]
+
+# --- API routes → serverless functions (must come BEFORE the SPA fallback) ---
+
+# AI-CMS backend (analyze / plan / preview / approve / deploy / cancel).
+[[redirects]]
+  from = "/api/cms/*"
+  to = "/.netlify/functions/cms/:splat"
+  status = 200
+
+# On-site Gemini advisor.
+[[redirects]]
+  from = "/api/advisor"
+  to = "/.netlify/functions/advisor"
+  status = 200
+
+# --- SPA fallback: every other path serves index.html for the React router ---
 [[redirects]]
   from = "/*"
   to = "/index.html"

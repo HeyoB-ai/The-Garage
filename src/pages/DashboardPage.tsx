@@ -101,7 +101,7 @@ export default function DashboardPage() {
         next = applyAction(cmd, action);
       } else {
         try {
-          next = await cmsApi.transition(cmd.id, action);
+          next = await cmsApi.transition(cmd, action);
           setMode("online");
         } catch {
           // Backend went away mid-flow — continue locally.

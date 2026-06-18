@@ -70,7 +70,8 @@ function resolveOne(f: PlannedFileChange): string | null {
       return f.mutation.content;
 
     case "appendFaq": {
-      const data = readJson(abs) ?? { items: [] };
+      const data = readJson(abs);
+      if (!data) return null; // never truncate: skip if the file can't be read
       const items: FaqItem[] = Array.isArray(data.items) ? data.items : [];
       const maxOrder = items.reduce((m, i) => Math.max(m, i.order ?? 0), 0);
       const entry: FaqItem = { ...f.mutation.entry, order: maxOrder + 1 };
