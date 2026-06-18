@@ -131,8 +131,28 @@ hosts the `/api/cms/*` routes above. Until then the chat fails gracefully.
 ✅ Dashboard scaffold: `/beheer` — text + voice input, command history, status
    stepper, preview/approve/cancel buttons (pipeline simulated client-side).
 ✅ Intent parser mock: `src/lib/cms/intent.ts` (heuristic, async, LLM-swap ready).
-✅ Guardrails: `AI_CMS_GUARDRAILS.md`.
+✅ **Backend API (step 1):** `/api/cms/{analyze,plan,preview,approve,deploy,cancel}`
+   + `GET /commands` on the Express server (`server/cms/`), backed by an
+   in-memory store. Logic lives in a shared pure state machine
+   (`src/lib/cms/machine.ts`) + planner (`src/lib/cms/planner.ts`) that the
+   browser reuses for an offline fallback. The dashboard is wired to it.
+✅ Guardrails: `AI_CMS_GUARDRAILS.md` (forbidden-path check enforced in the planner).
 ✅ DB proposal: `DATABASE_SCHEMA.md`.
 
-⬜ Real backend (`/api/cms/*`), LLM wiring, GitHub/Netlify automation, Supabase,
-   uploads, auth, prerender SEO — all designed above, not yet implemented.
+⬜ Remaining: swap the in-memory store for Supabase; swap the mock planner for a
+   real LLM (Claude) that produces actual file diffs; wire `applyAction`'s
+   TransitionContext to the GitHub API (branch/commit/PR) and Netlify API
+   (preview/deploy); uploads, auth, prerender SEO — all designed above.
+
+### Step-1 API quick reference
+
+```
+POST /api/cms/analyze   { text, source }   -> { command }   status: analyzed
+POST /api/cms/plan      { commandId }       -> { command }   status: planned
+POST /api/cms/preview   { commandId }       -> { command }   status: preview_ready (mock branch + preview URL)
+POST /api/cms/approve   { commandId }       -> { command }   status: approved
+POST /api/cms/deploy    { commandId }       -> { command }   status: live
+POST /api/cms/cancel    { commandId }       -> { command }   status: cancelled
+GET  /api/cms/commands                      -> { commands }
+```
+Invalid transitions return HTTP 409; unknown ids return 404.

@@ -1,56 +1,46 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Send, Mic, MicOff, Sparkles, Eye, Check, X, Clock, GitBranch,
-  AlertTriangle, ShieldCheck, Loader2, ExternalLink,
+  AlertTriangle, ShieldCheck, Loader2, ExternalLink, Wifi, WifiOff,
+  FilePlus2, FilePen, FileX2,
 } from "lucide-react";
 import PageShell from "../components/layout/PageShell";
 import Seo from "../components/Seo";
+import { INTENT_LABELS } from "../lib/cms/intent";
+import { cmsApi } from "../lib/cms/api";
+import { createCommand, applyAction } from "../lib/cms/machine";
 import {
-  analyzeCommand, INTENT_LABELS, type ParsedCommand,
-} from "../lib/cms/intent";
+  STATUS_FLOW,
+  type ApiCommand,
+  type CommandAction,
+  type CommandStatus,
+  type PlannedFileChange,
+} from "../lib/cms/contract";
 
 /* ----------------------------------------------------------------------- *
- * NOTE: This is a front-end SCAFFOLD / mockup. No backend is wired yet.
- * Status transitions below are simulated client-side so the workflow is
- * demonstrable. The buttons map 1:1 to the real pipeline described in
- * AI_AGENT_ARCHITECTURE.md. Replacing `analyzeCommand` and the
- * `advance()` simulation with real API calls is the only work needed.
+ * This dashboard is backend-first: it calls /api/cms/* (real Express API).
+ * If the backend is unreachable (e.g. static deploy without functions), it
+ * transparently falls back to the SHARED pure state machine so the demo keeps
+ * working. The logic is identical on both paths.
  * ----------------------------------------------------------------------- */
 
-type Status =
-  | "received" | "analyzed" | "planned" | "preview_ready"
-  | "approved" | "live" | "cancelled";
+type Mode = "unknown" | "online" | "offline";
 
-interface CommandRecord {
-  id: string;
-  text: string;
-  source: "text" | "voice";
-  parsed?: ParsedCommand;
-  status: Status;
-  branchName?: string;
-  previewUrl?: string;
-  createdAt: number;
-}
-
-const STATUS_FLOW: Status[] = [
-  "received", "analyzed", "planned", "preview_ready", "approved", "live",
-];
-
-const STATUS_LABEL: Record<Status, string> = {
-  received: "Received",
+const STATUS_LABEL: Record<CommandStatus, string> = {
   analyzed: "Analyzed",
   planned: "Planned",
   preview_ready: "Preview ready",
   approved: "Approved",
   live: "Live",
   cancelled: "Cancelled",
+  error: "Error",
 };
 
-function slugifyForBranch(parsed?: ParsedCommand): string {
-  const intent = parsed?.intent ?? "change";
-  const rand = Math.random().toString(36).slice(2, 7);
-  return `cms/${intent.replace(/_/g, "-")}-${rand}`;
-}
+const EXAMPLES = [
+  "Voeg een nieuwsbericht toe over onze open dag met foto",
+  "Voeg een nieuwssectie toe aan de website met eigen menukeuze",
+  "Wijzig de openingstijden naar 09:00 - 17:00",
+];
 
 // Minimal typing for the optional Web Speech API (no dependency added).
 type SpeechRecognitionLike = {
@@ -74,8 +64,10 @@ function getSpeechRecognition(): SpeechRecognitionLike | null {
 
 export default function DashboardPage() {
   const [input, setInput] = useState("");
-  const [commands, setCommands] = useState<CommandRecord[]>([]);
+  const [commands, setCommands] = useState<ApiCommand[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("unknown");
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -86,39 +78,41 @@ export default function DashboardPage() {
 
   const submit = async (text: string, source: "text" | "voice") => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || analyzing) return;
     setInput("");
-    const id = `cmd-${Date.now()}`;
-    const record: CommandRecord = {
-      id, text: trimmed, source, status: "received", createdAt: Date.now(),
-    };
-    setCommands((prev) => [record, ...prev]);
-
     setAnalyzing(true);
-    const parsed = await analyzeCommand(trimmed);
+    let cmd: ApiCommand;
+    try {
+      cmd = await cmsApi.analyze(trimmed, source);
+      setMode("online");
+    } catch {
+      cmd = createCommand(trimmed, source); // offline fallback (shared machine)
+      setMode("offline");
+    }
+    setCommands((prev) => [cmd, ...prev]);
     setAnalyzing(false);
-
-    setCommands((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? { ...c, parsed, status: "analyzed", branchName: slugifyForBranch(parsed) }
-          : c
-      )
-    );
   };
 
-  // Simulated pipeline step. In production each transition is an API call.
-  const advance = (id: string, to: Status) => {
-    setCommands((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const previewUrl =
-          to === "preview_ready"
-            ? `https://deploy-preview--the-garage.netlify.app/${(c.branchName ?? "").split("/").pop()}`
-            : c.previewUrl;
-        return { ...c, status: to, previewUrl };
-      })
-    );
+  const act = async (cmd: ApiCommand, action: CommandAction) => {
+    setBusyId(cmd.id);
+    let next: ApiCommand;
+    try {
+      if (mode === "offline") {
+        next = applyAction(cmd, action);
+      } else {
+        try {
+          next = await cmsApi.transition(cmd.id, action);
+          setMode("online");
+        } catch {
+          // Backend went away mid-flow — continue locally.
+          next = applyAction(cmd, action);
+          setMode("offline");
+        }
+      }
+      setCommands((prev) => prev.map((c) => (c.id === cmd.id ? next : c)));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const toggleVoice = () => {
@@ -150,33 +144,26 @@ export default function DashboardPage() {
       <section className="py-12 sm:py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="mb-8">
-            <span className="inline-flex items-center gap-2 text-amber-500 uppercase tracking-widest font-mono text-xs mb-3">
-              <Sparkles className="w-4 h-4" /> AI-CMS · Preview Scaffold
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
-              Manage your website
-            </h1>
-            <p className="text-neutral-400 max-w-2xl text-sm leading-relaxed">
-              Type or speak an instruction in plain language. The assistant interprets it,
-              prepares a change, and creates a safe preview before anything goes live.
-            </p>
-          </div>
-
-          {/* Demo notice */}
-          <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-8 text-xs text-amber-200/90">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <p>
-              <strong className="text-amber-300">Demo mode.</strong> No backend is connected yet —
-              intents are parsed locally and the pipeline is simulated. See{" "}
-              <code className="text-amber-300">AI_AGENT_ARCHITECTURE.md</code> for wiring.
-            </p>
+          <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
+            <div>
+              <span className="inline-flex items-center gap-2 text-amber-500 uppercase tracking-widest font-mono text-xs mb-3">
+                <Sparkles className="w-4 h-4" /> AI-CMS · Step 1 backend
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
+                Manage your website
+              </h1>
+              <p className="text-neutral-400 max-w-2xl text-sm leading-relaxed">
+                Type or speak an instruction in plain language. The assistant interprets it,
+                drafts a change plan, builds a safe preview, and waits for your approval.
+              </p>
+            </div>
+            <ModeBadge mode={mode} />
           </div>
 
           {/* Command input */}
           <form
             onSubmit={(e) => { e.preventDefault(); submit(input, "text"); }}
-            className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 mb-4"
+            className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 mb-6"
           >
             <div className="flex items-center gap-2">
               <input
@@ -207,11 +194,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {[
-                "Voeg een nieuwsbericht toe over onze open dag met foto",
-                "Voeg een nieuwssectie toe aan de website met eigen menukeuze",
-                "Wijzig de openingstijden naar 09:00 - 17:00",
-              ].map((ex) => (
+              {EXAMPLES.map((ex) => (
                 <button
                   key={ex}
                   type="button"
@@ -232,7 +215,7 @@ export default function DashboardPage() {
               </p>
             )}
             {commands.map((c) => (
-              <CommandCard key={c.id} record={c} onAdvance={advance} />
+              <CommandCard key={c.id} record={c} busy={busyId === c.id} onAct={act} />
             ))}
           </div>
         </div>
@@ -241,11 +224,36 @@ export default function DashboardPage() {
   );
 }
 
+function ModeBadge({ mode }: { mode: Mode }) {
+  if (mode === "online")
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+        <Wifi className="w-3.5 h-3.5" /> Backend connected
+      </span>
+    );
+  if (mode === "offline")
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
+        <WifiOff className="w-3.5 h-3.5" /> Demo mode (offline)
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-500">
+      <Loader2 className="w-3.5 h-3.5" /> Not connected yet
+    </span>
+  );
+}
+
+const FILE_ICON: Record<PlannedFileChange["action"], React.ReactNode> = {
+  create: <FilePlus2 className="w-3.5 h-3.5 text-emerald-400" />,
+  update: <FilePen className="w-3.5 h-3.5 text-amber-400" />,
+  delete: <FileX2 className="w-3.5 h-3.5 text-rose-400" />,
+};
+
 function CommandCard({
-  record, onAdvance,
-}: { record: CommandRecord; onAdvance: (id: string, to: Status) => void }) {
-  const { parsed } = record;
-  const structural = parsed?.changeType === "structural";
+  record, busy, onAct,
+}: { record: ApiCommand; busy: boolean; onAct: (c: ApiCommand, a: CommandAction) => void }) {
+  const structural = record.changeType === "structural";
   const stepIndex = STATUS_FLOW.indexOf(record.status);
 
   return (
@@ -254,38 +262,47 @@ function CommandCard({
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-            {record.source === "voice" ? <Mic className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+            {record.transcriptSource === "voice" ? <Mic className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           </div>
           <div>
-            <p className="text-sm text-white font-medium leading-snug">{record.text}</p>
-            {parsed && (
-              <p className="text-[11px] font-mono text-neutral-500 mt-1">
-                {INTENT_LABELS[parsed.intent]} · {(parsed.confidence * 100).toFixed(0)}% confidence
-              </p>
-            )}
+            <p className="text-sm text-white font-medium leading-snug">{record.inputText}</p>
+            <p className="text-[11px] font-mono text-neutral-500 mt-1">
+              {INTENT_LABELS[record.intent]} · {(record.confidence * 100).toFixed(0)}% confidence
+            </p>
           </div>
         </div>
-        {parsed && (
-          <span
-            className={`shrink-0 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded border ${
-              structural
-                ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
-                : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-            }`}
-          >
-            {structural ? "Structural" : parsed.changeType}
-          </span>
-        )}
+        <span
+          className={`shrink-0 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded border ${
+            structural
+              ? "bg-rose-500/10 text-rose-300 border-rose-500/30"
+              : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+          }`}
+        >
+          {structural ? "Structural · approval" : record.changeType}
+        </span>
       </div>
 
-      {/* Parsed intent payload */}
-      {parsed && (
-        <pre className="bg-neutral-950 border border-neutral-800 rounded p-3 text-[11px] text-neutral-400 font-mono overflow-x-auto mb-4">
-{JSON.stringify(
-  { intent: parsed.intent, confidence: parsed.confidence, requiresApproval: parsed.requiresApproval, fields: parsed.fields },
-  null, 2
-)}
-        </pre>
+      {/* Plan */}
+      {record.plan && (
+        <div className="bg-neutral-950 border border-neutral-800 rounded-lg p-4 mb-4">
+          <p className="text-xs text-neutral-300 mb-3">{record.plan.summary}</p>
+          {record.plan.files.length > 0 && (
+            <ul className="space-y-1.5 mb-3">
+              {record.plan.files.map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-[11px] font-mono text-neutral-400">
+                  {FILE_ICON[f.action]}
+                  <span className="text-neutral-300">{f.path}</span>
+                  <span className="text-neutral-600">— {f.description}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {record.plan.warnings.map((w, i) => (
+            <p key={i} className="flex items-start gap-1.5 text-[11px] text-amber-300/90">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {w}
+            </p>
+          ))}
+        </div>
       )}
 
       {/* Status stepper */}
@@ -331,34 +348,31 @@ function CommandCard({
         </div>
       )}
 
-      {/* Actions — map to the real pipeline */}
-      <div className="flex flex-wrap gap-2">
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {busy && <Loader2 className="w-4 h-4 animate-spin text-amber-400" />}
         {record.status === "analyzed" && (
-          <ActionBtn onClick={() => onAdvance(record.id, "planned")} icon={<Clock className="w-4 h-4" />}>
+          <ActionBtn onClick={() => onAct(record, "plan")} icon={<Clock className="w-4 h-4" />}>
             Make plan
           </ActionBtn>
         )}
         {record.status === "planned" && (
-          <ActionBtn onClick={() => onAdvance(record.id, "preview_ready")} icon={<Eye className="w-4 h-4" />}>
+          <ActionBtn onClick={() => onAct(record, "preview")} icon={<Eye className="w-4 h-4" />}>
             Create preview
           </ActionBtn>
         )}
         {record.status === "preview_ready" && (
           <>
-            <ActionBtn
-              primary
-              onClick={() => onAdvance(record.id, "approved")}
-              icon={<Check className="w-4 h-4" />}
-            >
-              {structural ? "Approve (required)" : "Approve & publish"}
+            <ActionBtn primary onClick={() => onAct(record, "approve")} icon={<Check className="w-4 h-4" />}>
+              {structural ? "Approve (required)" : "Approve"}
             </ActionBtn>
-            <ActionBtn onClick={() => onAdvance(record.id, "cancelled")} icon={<X className="w-4 h-4" />} danger>
+            <ActionBtn onClick={() => onAct(record, "cancel")} icon={<X className="w-4 h-4" />} danger>
               Cancel
             </ActionBtn>
           </>
         )}
         {record.status === "approved" && (
-          <ActionBtn primary onClick={() => onAdvance(record.id, "live")} icon={<ShieldCheck className="w-4 h-4" />}>
+          <ActionBtn primary onClick={() => onAct(record, "deploy")} icon={<ShieldCheck className="w-4 h-4" />}>
             Merge &amp; go live
           </ActionBtn>
         )}
@@ -368,6 +382,22 @@ function CommandCard({
           </span>
         )}
       </div>
+
+      {/* Log timeline */}
+      {record.logs.length > 0 && (
+        <details className="mt-4 group">
+          <summary className="text-[11px] font-mono text-neutral-500 cursor-pointer hover:text-neutral-300">
+            Activity log ({record.logs.length})
+          </summary>
+          <ul className="mt-2 space-y-1 border-l border-neutral-800 pl-3">
+            {record.logs.map((l, i) => (
+              <li key={i} className="text-[11px] font-mono text-neutral-500">
+                <span className="text-amber-500/80">{l.step}</span> — {l.message}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

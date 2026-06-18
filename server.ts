@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { cmsRouter } from "./server/cms/router";
 
 dotenv.config();
 
@@ -10,6 +11,9 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// AI-CMS backend API (/api/cms/*). Registered before the SPA fallback.
+app.use("/api/cms", cmsRouter);
 
 // Lazy-initialization helper for Gemini API to meet the dependency guidelines
 let aiClient: GoogleGenAI | null = null;
