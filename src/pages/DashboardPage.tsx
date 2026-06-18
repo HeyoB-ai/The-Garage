@@ -449,6 +449,13 @@ function CommandCard({
           )}
         </div>
       )}
+      {record.status === "preview_ready" && record.previewUrl && (
+        <p className="flex items-start gap-1.5 text-[11px] text-neutral-500 mb-4 -mt-2">
+          <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          The preview builds on Netlify and can take ~1–2 minutes. If you see “Site not found”,
+          wait a moment and refresh.
+        </p>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2 items-center">

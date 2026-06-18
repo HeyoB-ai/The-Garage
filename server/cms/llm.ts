@@ -1,58 +1,125 @@
 /**
- * LLM copy drafting (server-side only).
+ * LLM copy drafting (server-side only) — provider-agnostic with fallback.
  *
- * Uses Gemini (GEMINI_API_KEY) to write real content — the news excerpt/body and
- * FAQ answers — replacing the placeholder copy from the pure generators. Runs
- * during the `plan` step in service.ts. Env-gated and fail-safe: if the key is
- * missing or the call fails, callers fall back to the deterministic placeholders
- * so the pipeline never breaks.
+ * Drafts the real news excerpt/body and FAQ answers. Supports OpenAI and Gemini;
+ * it tries providers in order and falls back to the next one (and finally to the
+ * deterministic placeholders) so one flaky/overloaded provider never breaks the
+ * flow. Adding Anthropic/Claude is a third `call*` function in the same shape.
  *
- * Gemini is used here (cheap, multilingual) per the model-routing plan in
- * AI_AGENT_ARCHITECTURE.md; structural/code drafting would route to Claude.
+ * Selection (env):
+ *   - CMS_LLM_PROVIDER = "openai" | "gemini"  → preferred provider
+ *   - otherwise: whichever API keys are present (OpenAI first if available)
+ *   - OPENAI_API_KEY / OPENAI_MODEL (default gpt-4o-mini)
+ *   - GEMINI_API_KEY / GEMINI_MODEL (default gemini-3.5-flash)
+ *
+ * OpenAI uses fetch (no extra dependency); Gemini uses @google/genai.
  */
 import { GoogleGenAI } from "@google/genai";
 
-export function llmEnabled(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
-}
-
-// Overridable without a code change (e.g. to dodge a transiently overloaded model).
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+type Provider = "openai" | "gemini";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const isTransient = (msg: string) => /429|rate|5\d\d|UNAVAILABLE|high demand|overloaded|timeout/i.test(msg);
 
-async function generateJson(prompt: string, system: string): Promise<any | null> {
+function providerOrder(): Provider[] {
+  const available: Provider[] = [];
+  if (process.env.OPENAI_API_KEY) available.push("openai");
+  if (process.env.GEMINI_API_KEY) available.push("gemini");
+  const pref = process.env.CMS_LLM_PROVIDER?.toLowerCase() as Provider | undefined;
+  if (pref && available.includes(pref)) {
+    return [pref, ...available.filter((p) => p !== pref)];
+  }
+  return available;
+}
+
+export function llmEnabled(): boolean {
+  return providerOrder().length > 0;
+}
+
+/** Returns the model's raw text (expected JSON), or null after retries. */
+async function callOpenAI(prompt: string, system: string): Promise<string | null> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`OpenAI ${res.status}: ${body}`);
+      }
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content ?? null;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt < 3 && isTransient(msg)) {
+        await sleep(700 * attempt);
+        continue;
+      }
+      console.error(`OpenAI draft failed (attempt ${attempt}):`, msg);
+      return null;
+    }
+  }
+  return null;
+}
+
+async function callGemini(prompt: string, system: string): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
   const ai = new GoogleGenAI({
     apiKey: key,
     httpOptions: { headers: { "User-Agent": "aistudio-build" } },
   });
-
-  // Retry transient errors (e.g. 503 "high demand"); fail safe to placeholders.
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await ai.models.generateContent({
-        model: MODEL,
+        model,
         contents: prompt,
         config: { systemInstruction: system, responseMimeType: "application/json" },
       });
-      const text = res.text;
-      if (!text) return null;
-      // Be tolerant of accidental code fences.
-      const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-      return JSON.parse(cleaned);
+      return res.text ?? null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const transient = /503|UNAVAILABLE|high demand|overloaded|429|rate/i.test(msg);
-      if (attempt < maxAttempts && transient) {
+      if (attempt < 3 && isTransient(msg)) {
         await sleep(700 * attempt);
         continue;
       }
-      console.error(`LLM draft failed (attempt ${attempt}), using placeholder:`, msg);
+      console.error(`Gemini draft failed (attempt ${attempt}):`, msg);
       return null;
     }
+  }
+  return null;
+}
+
+function parseJson(text: string | null): any | null {
+  if (!text) return null;
+  try {
+    const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
+
+/** Try each configured provider in order; fall back to placeholders (null). */
+async function generateJson(prompt: string, system: string): Promise<any | null> {
+  for (const provider of providerOrder()) {
+    const text = provider === "openai" ? await callOpenAI(prompt, system) : await callGemini(prompt, system);
+    const parsed = parseJson(text);
+    if (parsed) return parsed;
   }
   return null;
 }
@@ -62,7 +129,6 @@ const BRAND =
   `certified supercar maintenance, turnkey vehicle import/export, and exclusive sales. ` +
   `Tone: professional, warm, trustworthy.`;
 
-/** Draft a news article. Returns null on failure (caller uses placeholders). */
 export async function draftNews(
   instruction: string,
   title: string
@@ -82,7 +148,6 @@ export async function draftNews(
   };
 }
 
-/** Draft a concise FAQ answer. Returns null on failure. */
 export async function draftFaqAnswer(question: string): Promise<string | null> {
   const data = await generateJson(
     `Write a concise, helpful answer (2-4 sentences, plain text) to this FAQ question ` +
