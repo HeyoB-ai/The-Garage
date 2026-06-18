@@ -55,6 +55,7 @@ export function createCommand(
     status: "analyzed",
     branchName: null,
     previewUrl: null,
+    prNumber: null,
     plan: null,
     logs: [
       logEntry(

@@ -63,6 +63,7 @@ export interface ApiCommand {
   status: CommandStatus;
   branchName: string | null;
   previewUrl: string | null;
+  prNumber: number | null;
   plan: ChangePlan | null;
   logs: CommandLogEntry[];
   createdAt: string;

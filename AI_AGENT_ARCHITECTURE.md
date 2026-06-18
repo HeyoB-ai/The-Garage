@@ -144,11 +144,32 @@ hosts the `/api/cms/*` routes above. Until then the chat fails gracefully.
    to disk on `preview` (`server/cms/executor.ts`), guardrailed to `content/` and
    `public/images/` only. The generated content is shown in the dashboard plan.
 
+✅ **GitHub + Netlify providers (step 3):** `server/cms/providers/` — a real
+   `GitHubProvider` (commits via the REST Contents API: branch → commit → PR →
+   merge) and a `NetlifyProvider` (deterministic Deploy-Preview URLs), behind a
+   `GitProvider`/`DeployProvider` seam with an env-gated factory. When
+   `GITHUB_TOKEN`+`GITHUB_REPO` (and `NETLIFY_SITE_NAME`) are set, `preview`
+   commits to a branch and opens a PR, `deploy` merges it, `cancel` closes it.
+   With no credentials it falls back to the local executor + simulated preview —
+   nothing outward-facing happens without explicit configuration.
+
 ⬜ Remaining: generators for the other intents (FAQ, opening hours, sections);
    swap the in-memory store for Supabase; swap placeholder copy for a real LLM
-   (Claude/Gemini) draft; route the executor writes through the GitHub API
-   (branch/commit/PR) + Netlify API (preview/deploy) via `TransitionContext`;
-   uploads, auth, prerender SEO — all designed above.
+   (Claude/Gemini) draft; uploads, auth, prerender SEO — all designed above.
+
+### Activating real GitHub/Netlify (operator setup)
+
+Set in `.env.local` (never commit secrets — see guardrails):
+```
+GITHUB_TOKEN=ghp_...          # token with repo contents + pull_requests scope
+GITHUB_REPO=HeyoB-ai/The-Garage
+GITHUB_DEFAULT_BRANCH=main
+NETLIFY_SITE_NAME=the-garage  # the Netlify subdomain
+```
+Then `preview` creates `cms/<intent>-<id>` with the generated content committed,
+opens a PR, and returns the Netlify deploy-preview URL; `deploy` squash-merges
+the PR (Netlify auto-deploys production); `cancel` closes the PR. Rollback =
+Git revert of the squash commit or Netlify "publish previous deploy".
 
 ### Step-1 API quick reference
 
