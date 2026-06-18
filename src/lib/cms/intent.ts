@@ -20,6 +20,7 @@ export type IntentName =
   | "add_faq"
   | "change_image"
   | "set_image"
+  | "set_theme"
   | "create_preview"
   | "approve_deploy"
   // Steering intents from the LLM planner (no pipeline action of their own).
@@ -53,6 +54,7 @@ const CONTENT_INTENTS: IntentName[] = [
   "add_faq",
   "change_image",
   "set_image",
+  "set_theme",
 ];
 
 const WORKFLOW_INTENTS: IntentName[] = ["create_preview", "approve_deploy"];
@@ -216,6 +218,7 @@ export const INTENT_LABELS: Record<IntentName, string> = {
   add_faq: "Add FAQ",
   change_image: "Change image",
   set_image: "Set image",
+  set_theme: "Edit theme",
   create_preview: "Create preview",
   approve_deploy: "Approve & deploy",
   clarify: "Needs clarification",

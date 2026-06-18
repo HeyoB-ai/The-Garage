@@ -14,6 +14,7 @@ export type OperationType =
   | "add_faq"
   | "add_section"
   | "set_image"
+  | "set_theme"
   | "clarify"
   | "unsupported";
 
@@ -25,6 +26,7 @@ export const ACTIONABLE_OPS: OperationType[] = [
   "add_faq",
   "add_section",
   "set_image",
+  "set_theme",
 ];
 
 // Allowed fields per operation. Anything else the model sends is dropped.
@@ -35,6 +37,7 @@ const ALLOWED_FIELDS: Record<OperationType, string[]> = {
   add_faq: ["question", "answer"],
   add_section: ["sectionType", "menuLabel"],
   set_image: ["targetId", "image"],
+  set_theme: ["primaryColor", "accentColor", "backgroundColor", "fontFamily", "logo"],
   clarify: ["question"],
   unsupported: ["message"],
 };

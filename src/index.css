@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+/* Brand token layer: the site styles itself with Tailwind colour utilities,
+   which v4 emits as CSS variables (--color-amber-*, --color-neutral-950) plus
+   --font-sans. Their values are driven by src/config/site.json "theme" and
+   applied at runtime by <ThemeStyle>, and are editable via the AI-CMS
+   set_theme operation. */

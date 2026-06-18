@@ -43,7 +43,13 @@ export interface SiteSnapshot {
   sections: { id: string; type: "section"; label: string }[];
   pages: { id: string; type: "page"; title: string }[];
   openingHours: { weekdays?: string; weekend?: string };
-  theme: { accent: string; font: string; logo: string };
+  theme: {
+    accent: string;
+    accentStrong: string;
+    background: string;
+    font: string;
+    logo: string | null;
+  };
 }
 
 export function buildSiteSnapshot(): SiteSnapshot {
@@ -95,9 +101,11 @@ export function buildSiteSnapshot(): SiteSnapshot {
       weekend: liveSite?.openingHours?.weekend,
     },
     theme: {
-      accent: String(liveSite?.theme?.accent ?? "amber"),
-      font: "Tailwind default sans",
-      logo: `text logo: ${liveSite?.shortName ?? "The Garage"} / Jávea`,
+      accent: String(liveSite?.theme?.accent ?? "#f59e0b"),
+      accentStrong: String(liveSite?.theme?.accentStrong ?? "#d97706"),
+      background: String(liveSite?.theme?.background ?? "#0a0a0a"),
+      font: String(liveSite?.theme?.font ?? "ui-sans-serif, system-ui, sans-serif"),
+      logo: liveSite?.theme?.logo ?? null,
     },
   };
 }

@@ -183,6 +183,66 @@ async function buildSetImageFiles(cmd: ApiCommand, image?: UploadedImage): Promi
   return files;
 }
 
+/* ---------------------------------------------------------------------- *
+ * set_theme: edit brand tokens (colours, font, logo) in src/config/site.json.
+ * ---------------------------------------------------------------------- */
+
+const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+export function isHexColor(v: unknown): v is string {
+  return typeof v === "string" && HEX_RE.test(v);
+}
+
+/** Darken a hex colour (~18%) for hover/strong accent. Falls back to input. */
+function darkenHex(hex: string): string {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  if (Number.isNaN(n)) return hex;
+  const ch = (shift: number) => {
+    const v = Math.round(((n >> shift) & 0xff) * 0.82);
+    return Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0");
+  };
+  return `#${ch(16)}${ch(8)}${ch(0)}`;
+}
+
+async function buildSetThemeFiles(cmd: ApiCommand, image?: UploadedImage): Promise<ResolvedFile[]> {
+  const f = cmd.fields;
+  let site: any;
+  try {
+    site = JSON.parse(fs.readFileSync(path.join(ROOT, "src/config/site.json"), "utf8"));
+  } catch {
+    return [];
+  }
+  site.theme = site.theme ?? {};
+
+  const accent = isHexColor(f.accentColor) ? f.accentColor : isHexColor(f.primaryColor) ? f.primaryColor : undefined;
+  if (accent) {
+    site.theme.accent = accent;
+    site.theme.accentStrong = darkenHex(accent);
+  }
+  if (isHexColor(f.backgroundColor)) site.theme.background = f.backgroundColor;
+  if (typeof f.fontFamily === "string" && f.fontFamily.trim()) site.theme.font = f.fontFamily.trim();
+
+  // Logo: uploaded image or fetched URL, committed locally; else fall back to URL.
+  const logoUrl = typeof f.logoUrl === "string" ? f.logoUrl : undefined;
+  let logoFile: ResolvedFile | null = null;
+  if (image || logoUrl) {
+    const src = await resolveSetImageSource(image, logoUrl);
+    if (src?.kind === "local") {
+      site.theme.logo = `/images/brand/logo.${src.ext}`;
+      logoFile = { path: `public/images/brand/logo.${src.ext}`, content: src.base64, encoding: "base64" };
+    } else if (src?.kind === "remote") {
+      site.theme.logo = src.url;
+    }
+  }
+
+  const files: ResolvedFile[] = [
+    { path: "src/config/site.json", content: JSON.stringify(site, null, 2) + "\n" },
+  ];
+  if (logoFile) files.push(logoFile);
+  return files;
+}
+
 /**
  * Build the files for the preview commit: the plan's content files plus, for a
  * news article, the uploaded image (committed to public/images/news). The
@@ -276,6 +336,29 @@ export async function planCommand(text: string, source: "text" | "voice"): Promi
           delete fields.image;
         }
 
+        // set_theme: validate colours as hex, move a logo URL aside.
+        if (intent === "set_theme") {
+          for (const key of ["primaryColor", "accentColor", "backgroundColor"]) {
+            const v = fields[key];
+            if (v != null && !isHexColor(v)) {
+              return createCommandFrom(text, source, {
+                intent: "clarify",
+                changeType: "unknown",
+                requiresApproval: false,
+                fields: {
+                  question:
+                    "Welke kleur bedoel je precies? Geef een geldige hex-kleur, bijvoorbeeld #22c55e voor groen.",
+                },
+                understood: result.understood,
+              });
+            }
+          }
+          if (typeof fields.logo === "string" && /^https?:\/\//i.test(fields.logo)) {
+            fields.logoUrl = fields.logo;
+          }
+          delete fields.logo;
+        }
+
         // Robustness for add_news: derive image/source hints from the raw text.
         if (intent === "add_news") {
           if (fields.needsImage == null) {
@@ -330,6 +413,8 @@ async function runSideEffects(
     const files =
       cmd.intent === "set_image"
         ? await buildSetImageFiles(cmd, opts.image)
+        : cmd.intent === "set_theme"
+        ? await buildSetThemeFiles(cmd, opts.image)
         : buildPreviewFiles(cmd, opts.image);
 
     if (git.enabled && files.length > 0) {

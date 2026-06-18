@@ -192,6 +192,20 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
       summary = `Set/replace the image on ${area} item "${targetId}".`;
       break;
     }
+    case "set_theme": {
+      const parts: string[] = [];
+      if (str(fields, "accentColor") || str(fields, "primaryColor")) parts.push("accent colour");
+      if (str(fields, "backgroundColor")) parts.push("background");
+      if (str(fields, "fontFamily")) parts.push("font");
+      if (str(fields, "logoUrl") || fields.needsImage) parts.push("logo");
+      files.push({
+        path: "src/config/site.json",
+        action: "update",
+        description: "Update theme tokens (colours / font / logo)",
+      });
+      summary = `Update the site theme${parts.length ? `: ${parts.join(", ")}` : ""}.`;
+      break;
+    }
     case "create_preview":
       summary = "Create a preview deploy for the current change.";
       break;

@@ -194,6 +194,12 @@ Deploy Preview, `deploy` merges it live, `cancel` closes it.
    `image` field. No upload ⇒ a default image (never broken). SWAP TARGET:
    route bytes to Supabase Storage + record `media_assets` instead of the repo.
 
+✅ **Item image (`set_image`) & theme (`set_theme`):** set/replace the photo on an
+   existing news/stock/portfolio item (validated `src/data.ts` patch for stock),
+   and edit brand tokens — colours/font/logo — via a runtime CSS-variable token
+   layer (`ThemeStyle` overrides Tailwind's `--color-*`/`--font-sans` from
+   `site.json`; no component/layout changes).
+
 ⬜ Remaining: generators for structural intents (sections, pages, menu items —
    require approval); customer/user auth; prerender SEO.
 

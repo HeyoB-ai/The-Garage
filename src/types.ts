@@ -142,5 +142,9 @@ export interface SiteConfig {
   };
   theme: {
     accent: string;
+    accentStrong?: string;
+    background?: string;
+    font?: string;
+    logo?: string | null;
   };
 }

@@ -179,6 +179,7 @@ const PLANNER_SYSTEM =
   `- add_faq { question, answer? }                           // add a FAQ entry\n` +
   `- add_section { sectionType, menuLabel? }                 // add a new section (structural)\n` +
   `- set_image { targetId, image? }                          // set/replace the photo of an EXISTING item; targetId MUST be an id from the snapshot (news slug, stock id like "car-3", or portfolio id). image may be an image URL.\n` +
+  `- set_theme { primaryColor?, accentColor?, backgroundColor?, fontFamily?, logo? } // change brand colours (hex like "#22c55e"), font, or logo (image URL). Only include the fields the user asked to change. "buttons/accent" = accentColor.\n` +
   `- clarify { question }                                    // ask the user a question\n` +
   `- unsupported { message }                                 // explain why it can't be done\n\n` +
   `Return JSON: {"understood": string (one short sentence in the user's language summarising ` +

@@ -81,13 +81,24 @@ export default function Navbar({ activeTab, setActiveTab, openBooking }: NavbarP
             }}
             id="navbar-logo"
           >
-            <div className="w-10 h-10 rounded bg-amber-500 flex items-center justify-center text-neutral-950 font-bold text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              G
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-wider block">THE GARAGE</span>
-              <span className="text-xs text-amber-500 tracking-widest font-mono block -mt-1">JÁVEA</span>
-            </div>
+            {siteConfig.theme.logo ? (
+              <img
+                src={siteConfig.theme.logo}
+                alt={siteConfig.name}
+                className="h-10 w-auto max-w-[180px] object-contain group-hover:scale-105 transition-transform"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <>
+                <div className="w-10 h-10 rounded bg-amber-500 flex items-center justify-center text-neutral-950 font-bold text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  G
+                </div>
+                <div>
+                  <span className="font-extrabold text-lg tracking-wider block">THE GARAGE</span>
+                  <span className="text-xs text-amber-500 tracking-widest font-mono block -mt-1">JÁVEA</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Desktop Nav Items */}

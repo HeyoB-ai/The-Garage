@@ -365,8 +365,12 @@ function CommandCard({
 }) {
   const structural = record.changeType === "structural";
   const stepIndex = STATUS_FLOW.indexOf(record.status);
-  const needsImage = Boolean(record.fields?.needsImage) || record.intent === "set_image";
+  const needsImage =
+    Boolean(record.fields?.needsImage) ||
+    record.intent === "set_image" ||
+    record.intent === "set_theme";
   const canUpload = needsImage && (record.status === "analyzed" || record.status === "planned");
+  const uploadLabel = record.intent === "set_theme" ? "Upload a logo (optional)" : "Upload a photo";
   const previewBuilding = previewState === "building";
   const previewTimedOut = previewState === "timeout";
   // Steering intents: show a friendly message, no pipeline / buttons.
@@ -482,7 +486,7 @@ function CommandCard({
           ) : (
             <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer hover:text-amber-400">
               <ImagePlus className="w-4 h-4 text-amber-500" />
-              <span>Upload a photo for this article</span>
+              <span>{uploadLabel}</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
             </label>
           )}

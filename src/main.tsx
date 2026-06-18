@@ -5,10 +5,12 @@ import App from './App.tsx';
 import NewsOverviewPage from './pages/NewsOverviewPage.tsx';
 import NewsDetailPage from './pages/NewsDetailPage.tsx';
 import DashboardPage from './pages/DashboardPage.tsx';
+import ThemeStyle from './components/ThemeStyle.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <ThemeStyle />
     <BrowserRouter>
       <Routes>
         {/* Existing landing page — unchanged */}
