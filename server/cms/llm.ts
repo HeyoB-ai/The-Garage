@@ -131,18 +131,30 @@ const BRAND =
 
 export async function draftNews(
   instruction: string,
-  title: string
-): Promise<{ excerpt?: string; body?: string } | null> {
-  const data = await generateJson(
-    `Write a short website news article based on this instruction: "${instruction}". ` +
+  title: string,
+  source?: { url: string; text: string }
+): Promise<{ title?: string; excerpt?: string; body?: string } | null> {
+  const prompt = source
+    ? `You are writing an ORIGINAL short news item for the website, based on a source article. ` +
+      `Do NOT copy, quote at length, or reproduce the source — summarize it in your OWN words. ` +
+      `Write in the SAME language as this instruction: "${instruction}". ` +
+      (title ? `Suggested title: "${title}". ` : "") +
+      `Source URL: ${source.url}\n\nSOURCE ARTICLE TEXT:\n"""${source.text}"""\n\n` +
+      `Return JSON with exactly: {"title": string (a concise original headline), ` +
+      `"excerpt": string (max ~160 chars, no markdown), "body": string ` +
+      `(3-6 short paragraphs, simple markdown: "## " headings, "- " bullets, "**bold**"; ` +
+      `no top-level H1, no images)}. The body MUST end with a short source attribution on its own ` +
+      `line that includes a markdown link to the source URL, e.g. "Bron: [titel](${source.url})".`
+    : `Write a short website news article based on this instruction: "${instruction}". ` +
       `The working title is "${title}". Write in the SAME language as the instruction. ` +
       `Return JSON with exactly: {"excerpt": string (max ~160 chars, no markdown), ` +
       `"body": string (3-6 short paragraphs in simple markdown: "## " headings, ` +
-      `"- " bullets and "**bold**" allowed; no images, no top-level H1)}.`,
-    BRAND
-  );
+      `"- " bullets and "**bold**" allowed; no images, no top-level H1)}.`;
+
+  const data = await generateJson(prompt, BRAND);
   if (!data || typeof data.body !== "string") return null;
   return {
+    title: typeof data.title === "string" ? data.title : undefined,
     excerpt: typeof data.excerpt === "string" ? data.excerpt : undefined,
     body: data.body,
   };
@@ -156,4 +168,98 @@ export async function draftFaqAnswer(question: string): Promise<string | null> {
     BRAND
   );
   return data && typeof data.answer === "string" ? data.answer : null;
+}
+
+/* ---------------------------------------------------------------------- *
+ * Source-article fetching (server-only) for "turn this link into a news
+ * item". Fail-safe: returns null on ANY problem so callers fall back to
+ * drafting from the instruction / placeholder.
+ * ---------------------------------------------------------------------- */
+
+const FETCH_TIMEOUT_MS = 8000;
+const MAX_FETCH_BYTES = 1024 * 1024; // ~1MB
+const MAX_TEXT_CHARS = 4000;
+
+/** Only allow external, public http(s) URLs (basic SSRF guard). */
+function isPublicHttpUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  const host = u.hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false;
+  if (host === "::1" || host.startsWith("fc") || host.startsWith("fd")) return false; // IPv6 loopback/ULA
+  if (/^(127\.|0\.|10\.|169\.254\.|192\.168\.)/.test(host)) return false; // loopback/private/link-local
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false; // 172.16-31.x
+  return true;
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#3[49];|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Fetch an external article and return its main text, or null on any failure. */
+export async function fetchArticleText(url: string): Promise<string | null> {
+  if (!isPublicHttpUrl(url)) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "TheGarageCMS/1.0 (+article summarizer)",
+        Accept: "text/html,application/xhtml+xml,text/plain,*/*",
+      },
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "";
+    if (ct && !/text\/html|application\/xhtml|text\/plain/i.test(ct)) return null;
+
+    // Bounded read (~1MB) so a huge page can't blow up memory.
+    let html: string;
+    const reader = res.body?.getReader();
+    if (reader) {
+      const chunks: Buffer[] = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          received += value.length;
+          chunks.push(Buffer.from(value));
+          if (received >= MAX_FETCH_BYTES) {
+            try { await reader.cancel(); } catch { /* ignore */ }
+            break;
+          }
+        }
+      }
+      html = Buffer.concat(chunks).toString("utf8");
+    } else {
+      html = (await res.text()).slice(0, MAX_FETCH_BYTES);
+    }
+
+    const text = htmlToText(html);
+    if (text.length < 50) return null; // too little to summarize
+    return text.slice(0, MAX_TEXT_CHARS);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

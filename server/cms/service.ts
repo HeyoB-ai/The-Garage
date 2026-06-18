@@ -13,7 +13,7 @@ import { applyAction, createCommand } from "../../src/lib/cms/machine";
 import type { TransitionContext } from "../../src/lib/cms/machine";
 import { resolvePlanFiles, writeResolvedFiles, type ResolvedFile } from "./executor";
 import { getDeployProvider, getGitProvider } from "./providers";
-import { draftFaqAnswer, draftNews, llmEnabled } from "./llm";
+import { draftFaqAnswer, draftNews, fetchArticleText, llmEnabled } from "./llm";
 import { DEFAULT_IMAGE } from "../../src/lib/cms/executors/news";
 
 // An image uploaded from the dashboard (a data URL + original filename).
@@ -154,8 +154,26 @@ async function enrichWithCopy(cmd: ApiCommand): Promise<ApiCommand> {
   try {
     if (cmd.intent === "add_news") {
       const title = typeof cmd.fields.title === "string" ? cmd.fields.title : "";
-      const draft = await draftNews(cmd.inputText, title || "Nieuw bericht");
-      if (draft) return { ...cmd, fields: { ...cmd.fields, ...draft } };
+      const sourceUrl = typeof cmd.fields.sourceUrl === "string" ? cmd.fields.sourceUrl : "";
+
+      // If a source link was given, fetch + summarize it (fail-safe).
+      let source: { url: string; text: string } | undefined;
+      if (sourceUrl) {
+        const text = await fetchArticleText(sourceUrl);
+        if (text) source = { url: sourceUrl, text };
+      }
+
+      const draft = await draftNews(cmd.inputText, title || "Nieuw bericht", source);
+      if (draft) {
+        const fields: Record<string, unknown> = {
+          ...cmd.fields,
+          excerpt: draft.excerpt,
+          body: draft.body,
+        };
+        // Fill the title from the draft only if the instruction didn't have one.
+        if (!title && draft.title) fields.title = draft.title;
+        return { ...cmd, fields };
+      }
     } else if (cmd.intent === "add_faq") {
       const q = typeof cmd.fields.question === "string" ? cmd.fields.question : "";
       const answer = await draftFaqAnswer(q || cmd.inputText);

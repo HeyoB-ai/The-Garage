@@ -114,6 +114,9 @@ function extractQuestion(text: string): string | undefined {
 export function classify(rawText: string): ParsedCommand {
   const text = rawText.toLowerCase().trim();
   const needsImage = has(text, "foto", "afbeelding", "image", "picture", "plaatje");
+  // An external article/source link the beheerder wants turned into a news item.
+  const urlMatch = rawText.match(/https?:\/\/[^\s)<>"']+/i);
+  const sourceUrl = urlMatch ? urlMatch[0] : undefined;
 
   const build = (
     intent: IntentName,
@@ -154,11 +157,18 @@ export function classify(rawText: string): ParsedCommand {
   }
 
   // --- Content (auto-allowed, still previewed) ---
-  if (has(text, "nieuwsbericht", "news post", "news article", "bericht") ||
-      (has(text, "nieuws", "news") && has(text, "toevoegen", "add", "plaats", "post"))) {
+  // Note: add_section ("nieuwssectie") is checked above and still wins.
+  if (
+    has(text, "nieuwsbericht", "news post", "news article", "bericht", "artikel", "article", "item", "post", "blog") ||
+    (has(text, "nieuws", "news") && has(text, "toevoegen", "add", "plaats", "post")) ||
+    (sourceUrl &&
+      has(text, "maak", "make", "item", "artikel", "article", "post", "blog", "nieuws", "news", "bericht"))
+  ) {
     return build("add_news", 0.9, {
+      // Title may stay empty; the server fills it from the linked article.
       title: extractTitle(text),
       needsImage,
+      sourceUrl,
     });
   }
   if (has(text, "openingstijd", "opening hour", "opening time", "openingsuren")) {
