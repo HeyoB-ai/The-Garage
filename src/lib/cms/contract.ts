@@ -13,7 +13,13 @@ import type { FaqItem } from "../../types";
 export type Mutation =
   | { kind: "createFile"; content: string }
   | { kind: "appendFaq"; entry: FaqItem }
-  | { kind: "updateOpeningHours"; weekdays?: string; weekend?: string };
+  | { kind: "updateOpeningHours"; weekdays?: string; weekend?: string }
+  // New content layer (content/site):
+  | {
+      kind: "appendNewsRecord";
+      record: { id: string; date: string; image: string; sourceLocale: string };
+    }
+  | { kind: "setNewsProse"; id: string; title: string; excerpt: string };
 
 export type CommandStatus =
   | "analyzed"

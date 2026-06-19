@@ -10,6 +10,7 @@ import News from "./components/News";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 import AdvisorChat from "./components/AdvisorChat";
+import SiteTheme from "./components/SiteTheme";
 
 export default function HomePage() {
   const { t, locale } = useSite();
@@ -28,6 +29,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
+      <SiteTheme />
       <Nav />
       <main>
         <Hero />

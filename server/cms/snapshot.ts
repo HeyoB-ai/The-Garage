@@ -4,34 +4,23 @@
  * instead of guessing. Kept intentionally small — ids + labels + a few key
  * fields, never full bodies.
  *
- * Data sources: src/data.ts (stock, portfolio — bundled), src/config (menu,
- * theme — bundled), and content/** (news, faq, pages — read from disk).
+ * Reads the NEW content layer (content/site/*) that the public site renders, so
+ * the planner plans against what the visitor actually sees:
+ *   - data.json   → language-independent facts (stock, news records, hours)
+ *   - {source}.json → prose (used here only for human labels/titles)
+ *   - theme.json  → brand tokens
  */
 import fs from "fs";
 import path from "path";
-import { CARS_STOCK, PORTFOLIO_ITEMS } from "../../src/data";
-import menuConfig from "../../src/config/menu.json";
-import siteConfig from "../../src/config/site.json";
 
 const ROOT = process.cwd();
+const SOURCE_LOCALE = "en";
 
 function readJson(rel: string): any | null {
   try {
     return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
   } catch {
     return null;
-  }
-}
-
-function listJsonDir(rel: string): any[] {
-  try {
-    return fs
-      .readdirSync(path.join(ROOT, rel))
-      .filter((f) => f.endsWith(".json") && !f.startsWith("_"))
-      .map((f) => readJson(`${rel}/${f}`))
-      .filter(Boolean);
-  } catch {
-    return [];
   }
 }
 
@@ -53,59 +42,45 @@ export interface SiteSnapshot {
 }
 
 export function buildSiteSnapshot(): SiteSnapshot {
-  const news = listJsonDir("content/news")
-    .slice(0, 30)
-    .map((a) => ({
-      id: String(a.slug ?? ""),
-      type: "news" as const,
-      title: String(a.title ?? ""),
-      date: String(a.date ?? ""),
-      published: a.published !== false,
-    }));
+  const data = readJson("content/site/data.json") ?? {};
+  const prose = readJson(`content/site/${SOURCE_LOCALE}.json`) ?? {};
+  const theme = readJson("content/site/theme.json") ?? {};
 
-  const faqData = readJson("content/faq/faq.json");
-  const faq = Array.isArray(faqData?.items)
-    ? faqData.items.map((f: any) => ({ id: String(f.id ?? ""), type: "faq" as const, question: String(f.question ?? "") }))
-    : [];
-
-  const pages = listJsonDir("content/pages").map((p) => ({
-    id: String(p.slug ?? ""),
-    type: "page" as const,
-    title: String(p.title ?? ""),
+  const news = (Array.isArray(data.news) ? data.news : []).slice(0, 30).map((n: any) => ({
+    id: String(n.id),
+    type: "news" as const,
+    title: String(prose?.news?.items?.[n.id]?.title ?? n.id),
+    date: String(n.date ?? ""),
+    published: true,
   }));
 
-  // Opening hours: prefer the on-disk config (reflects runtime edits), else the
-  // bundled default.
-  const liveSite = readJson("src/config/site.json") ?? (siteConfig as any);
-
-  const sections = ((menuConfig as any).items ?? [])
-    .filter((i: any) => i.type === "section")
-    .map((i: any) => ({ id: String(i.id), type: "section" as const, label: String(i.label) }));
+  const stock = (Array.isArray(data.stock) ? data.stock : []).map((c: any) => ({
+    id: String(c.id),
+    type: "stock" as const,
+    make: String(c.make ?? ""),
+    model: String(c.model ?? ""),
+    status: String(c.status ?? ""),
+    price: Number(c.price ?? 0),
+  }));
 
   return {
     news,
-    stock: CARS_STOCK.map((c) => ({
-      id: c.id,
-      type: "stock" as const,
-      make: c.make,
-      model: c.model,
-      status: c.status,
-      price: c.price,
-    })),
-    portfolio: PORTFOLIO_ITEMS.map((p) => ({ id: p.id, type: "portfolio" as const, title: p.title })),
-    faq,
-    sections,
-    pages,
+    stock,
+    // The new site does not (yet) expose these surfaces.
+    portfolio: [],
+    faq: [],
+    sections: [],
+    pages: [],
     openingHours: {
-      weekdays: liveSite?.openingHours?.weekdays,
-      weekend: liveSite?.openingHours?.weekend,
+      weekdays: data?.openingHours?.weekdays,
+      weekend: data?.openingHours?.weekend,
     },
     theme: {
-      accent: String(liveSite?.theme?.accent ?? "#f59e0b"),
-      accentStrong: String(liveSite?.theme?.accentStrong ?? "#d97706"),
-      background: String(liveSite?.theme?.background ?? "#0a0a0a"),
-      font: String(liveSite?.theme?.font ?? "ui-sans-serif, system-ui, sans-serif"),
-      logo: liveSite?.theme?.logo ?? null,
+      accent: String(theme.accent ?? "#154a6b"),
+      accentStrong: String(theme.accentStrong ?? "#1c5c84"),
+      background: String(theme.background ?? "#f5f2ec"),
+      font: String(theme.font ?? "Hanken Grotesk, system-ui, sans-serif"),
+      logo: theme.logo ?? null,
     },
   };
 }

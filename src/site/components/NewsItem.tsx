@@ -1,10 +1,20 @@
 import { ArrowUpRight } from "lucide-react";
 import { useSite } from "../i18n";
-import type { NewsRecord } from "../content";
+import { getProse, isLocale, type NewsRecord } from "../content";
+
+type NewsProse = { title: string; excerpt: string };
 
 export default function NewsItem({ record, feature = false }: { record: NewsRecord; feature?: boolean }) {
   const { t, locale } = useSite();
-  const prose = (t.news.items as Record<string, { title: string; excerpt: string }>)[record.id];
+  // Prose in the active language, else fall back to the source language until the
+  // other three are translated (see CMS add_news → translate_content hook).
+  const rawLocale = (record as { sourceLocale?: string }).sourceLocale;
+  const sourceLocale = isLocale(rawLocale) ? rawLocale : undefined;
+  const active = (t.news.items as Record<string, NewsProse>)[record.id];
+  const fallback = sourceLocale
+    ? (getProse(sourceLocale).news.items as Record<string, NewsProse>)[record.id]
+    : undefined;
+  const prose = active ?? fallback;
   const date = new Date(record.date).toLocaleDateString(
     { nl: "nl-NL", en: "en-GB", de: "de-DE", es: "es-ES" }[locale],
     { year: "numeric", month: "long", day: "numeric" }
