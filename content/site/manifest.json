@@ -1,0 +1,35 @@
+{
+  "_comment": "Machine-readable map of editable surfaces for the AI-CMS (DESIGN.md §7). Describes WHAT content exists and WHERE, so the agent can discover editable keys, collections and the data/prose split.",
+  "version": 1,
+  "site": "the-garage-javea",
+  "locales": ["nl", "en", "de", "es"],
+  "defaultLocale": "en",
+  "sourceLocale": "en",
+  "files": {
+    "data": "content/site/data.json",
+    "prose": "content/site/{locale}.json",
+    "tokens": "src/index.css"
+  },
+  "prose": {
+    "description": "Per-locale text under identical keys. Edit one locale, AI-translate the others, approve per language.",
+    "sections": ["meta", "nav", "hero", "services", "calc", "stock", "about", "news", "hours", "contact", "advisor", "footer", "lang"]
+  },
+  "data": {
+    "description": "Language-independent facts. Edited once, shared across locales.",
+    "singletons": ["contact", "openingHours", "media"],
+    "collections": {
+      "stock": { "file": "content/site/data.json#stock", "idField": "id", "prose": "content/site/{locale}.json#stock.cars.{id}", "fields": ["make", "model", "price", "year", "mileage", "fuel", "transmission", "status", "image"] },
+      "news": { "file": "content/site/data.json#news", "idField": "id", "prose": "content/site/{locale}.json#news.items.{id}", "fields": ["date", "image"] }
+    }
+  },
+  "components": {
+    "Hero": "hero.*",
+    "ServiceCard": "services.items.*",
+    "CarCard": "data#stock + stock.cars.{id}",
+    "NewsItem": "data#news + news.items.{id}",
+    "OpeningHours": "data#openingHours + hours.*",
+    "ContactBlock": "data#contact + contact.*",
+    "ImportCalculator": "calc.*",
+    "AdvisorChat": "advisor.*"
+  }
+}
