@@ -1,0 +1,9 @@
+{
+  "_comment": "Brand design tokens for the public site. Edited by the AI-CMS (set_theme); applied at runtime by <SiteTheme>, overriding the defaults in src/index.css. Defaults below equal the DESIGN.md limestone + Mediterranean-blue system.",
+  "accent": "#154a6b",
+  "accentStrong": "#1c5c84",
+  "background": "#f5f2ec",
+  "ink": "#1a1e24",
+  "font": "Hanken Grotesk, system-ui, sans-serif",
+  "logo": null
+}

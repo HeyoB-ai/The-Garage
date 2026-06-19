@@ -13,7 +13,7 @@
 import type { ChangePlan, PlannedFileChange } from "./contract";
 import type { ChangeType, IntentName } from "./intent";
 import { slugify } from "./slug";
-import { buildNewsArticleFile } from "./executors/news";
+import { DEFAULT_IMAGE } from "./executors/news";
 import { buildFaqEntry } from "./executors/faq";
 import { buildOpeningHours } from "./executors/openingHours";
 
@@ -54,30 +54,32 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
 
   switch (intent) {
     case "add_news": {
+      // New content layer: a record in data.json#news + prose in the source
+      // locale. Other languages are translated in a later step (hook below).
       const title = str(fields, "title") ?? "Nieuw bericht";
-      const needsImage = Boolean(fields.needsImage);
-      const generated = buildNewsArticleFile(title, {
-        needsImage,
-        date: dateStr,
-        excerpt: str(fields, "excerpt"),
-        body: str(fields, "body"),
+      const excerpt = str(fields, "excerpt") ?? `${title}.`;
+      const sourceLocale = str(fields, "sourceLocale") ?? "en";
+      const id = slugify(title) || `news-${dateStr}`;
+      const record = { id, date: dateStr, image: DEFAULT_IMAGE, sourceLocale };
+
+      files.push({
+        path: "content/site/data.json",
+        action: "update",
+        description: `Add news record "${title}" (${id})`,
+        preview: JSON.stringify(record, null, 2),
+        mutation: { kind: "appendNewsRecord", record },
       });
       files.push({
-        path: generated.path,
-        action: "create",
-        description: `New news article "${generated.article.title}"`,
-        preview: generated.content, // the exact file that will be written
-        mutation: { kind: "createFile", content: generated.content },
+        path: `content/site/${sourceLocale}.json`,
+        action: "update",
+        description: `Add ${sourceLocale} news text for "${title}"`,
+        preview: JSON.stringify({ title, excerpt }, null, 2),
+        mutation: { kind: "setNewsProse", id, title, excerpt },
       });
-      if (needsImage) {
-        files.push({
-          path: `public/images/news/${generated.article.slug}.jpg`,
-          action: "create",
-          description: "Article image (awaiting upload — using a placeholder until then)",
-        });
-        warnings.push("An image is referenced; upload a photo to replace the placeholder.");
-      }
-      summary = `Add a news article "${generated.article.title}" to /content/news.`;
+      warnings.push(
+        `Written in ${sourceLocale}; the other languages can be auto-translated next (TODO: translate_content).`
+      );
+      summary = `Add news "${title}" to the content layer (${sourceLocale}). Set a photo afterwards with "set a photo on ${id}".`;
       break;
     }
     case "add_faq": {
@@ -100,14 +102,14 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
         warnings.push("No clear opening times found — please state them like '09:00 - 17:00'.");
       }
       files.push({
-        path: "src/config/site.json",
+        path: "content/site/data.json",
         action: "update",
-        description: "Update openingHours fields",
+        description: "Update openingHours.weekdays (time range) in the site content layer",
         preview: JSON.stringify(hours, null, 2),
         mutation: { kind: "updateOpeningHours", ...hours },
       });
       summary = hours.weekdays
-        ? `Update weekday opening hours to ${from} - ${to}.`
+        ? `Update weekday opening hours to ${from} – ${to}.`
         : "Update opening hours (times unclear — needs confirmation).";
       break;
     }
@@ -178,11 +180,10 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
     case "set_image": {
       const targetId = str(fields, "targetId") ?? "item";
       const area = str(fields, "area") ?? "item";
-      const targetPath = area === "news" ? `content/news/${targetId}.json` : "src/data.ts";
       files.push({
-        path: targetPath,
+        path: "content/site/data.json",
         action: "update",
-        description: `Set the image of ${area} item "${targetId}"`,
+        description: `Set the image of ${area} item "${targetId}" in the content layer`,
       });
       files.push({
         path: `public/images/${area}/${targetId}`,
@@ -199,7 +200,7 @@ export function buildPlan(input: PlanInput, today = new Date()): ChangePlan {
       if (str(fields, "fontFamily")) parts.push("font");
       if (str(fields, "logoUrl") || fields.needsImage) parts.push("logo");
       files.push({
-        path: "src/config/site.json",
+        path: "content/site/theme.json",
         action: "update",
         description: "Update theme tokens (colours / font / logo)",
       });

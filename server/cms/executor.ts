@@ -71,17 +71,18 @@ export function resolvePlanFiles(plan: ChangePlan | null): ResolvedFile[] {
 function resolveOne(f: PlannedFileChange): string | null {
   if (!f.mutation || !isAllowed(f.path)) return null;
   const abs = path.resolve(ROOT, f.path);
+  const m = f.mutation; // const keeps the discriminant narrowing inside closures
 
-  switch (f.mutation.kind) {
+  switch (m.kind) {
     case "createFile":
-      return f.mutation.content;
+      return m.content;
 
     case "appendFaq": {
       const data = readJson(abs);
       if (!data) return null; // never truncate: skip if the file can't be read
       const items: FaqItem[] = Array.isArray(data.items) ? data.items : [];
       const maxOrder = items.reduce((m, i) => Math.max(m, i.order ?? 0), 0);
-      const entry: FaqItem = { ...f.mutation.entry, order: maxOrder + 1 };
+      const entry: FaqItem = { ...m.entry, order: maxOrder + 1 };
       // Avoid duplicate ids.
       if (items.some((i) => i.id === entry.id)) {
         entry.id = `${entry.id}-${items.length + 1}`;
@@ -92,10 +93,30 @@ function resolveOne(f: PlannedFileChange): string | null {
 
     case "updateOpeningHours": {
       const data = readJson(abs);
-      if (!data) return null; // site.json must exist
+      if (!data) return null; // target file must exist
       data.openingHours = data.openingHours ?? {};
-      if (f.mutation.weekdays) data.openingHours.weekdays = f.mutation.weekdays;
-      if (f.mutation.weekend) data.openingHours.weekend = f.mutation.weekend;
+      if (m.weekdays) data.openingHours.weekdays = m.weekdays;
+      if (m.weekend) data.openingHours.weekend = m.weekend;
+      return JSON.stringify(data, null, 2) + "\n";
+    }
+
+    // New content layer: news record in content/site/data.json#news.
+    case "appendNewsRecord": {
+      const data = readJson(abs);
+      if (!data) return null;
+      const list = Array.isArray(data.news) ? data.news : [];
+      if (!list.some((n: any) => n?.id === m.record.id)) list.push(m.record);
+      data.news = list;
+      return JSON.stringify(data, null, 2) + "\n";
+    }
+
+    // New content layer: per-locale prose in content/site/{locale}.json#news.items.{id}.
+    case "setNewsProse": {
+      const data = readJson(abs);
+      if (!data) return null;
+      data.news = data.news ?? {};
+      data.news.items = data.news.items ?? {};
+      data.news.items[m.id] = { title: m.title, excerpt: m.excerpt };
       return JSON.stringify(data, null, 2) + "\n";
     }
 

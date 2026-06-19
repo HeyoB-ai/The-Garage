@@ -162,23 +162,22 @@ async function buildSetImageFiles(cmd: ApiCommand, image?: UploadedImage): Promi
     imageRef = src.url;
   }
 
-  const files: ResolvedFile[] = [];
-  if (area === "news") {
-    const nf = findNewsFileBySlug(targetId);
-    if (!nf) return [];
-    nf.json.image = imageRef;
-    files.push({ path: nf.path, content: JSON.stringify(nf.json, null, 2) + "\n" });
-  } else {
-    let text: string | null = null;
-    try {
-      text = fs.readFileSync(path.join(ROOT, "src/data.ts"), "utf8");
-    } catch {
-      return [];
-    }
-    const patched = patchDataTsImage(text, targetId, imageRef);
-    if (!patched) return []; // validation failed → never write a broken file
-    files.push({ path: "src/data.ts", content: patched });
+  // Patch the new content layer: data.json#stock[id].image or #news[id].image.
+  let data: any;
+  try {
+    data = JSON.parse(fs.readFileSync(path.join(ROOT, "content/site/data.json"), "utf8"));
+  } catch {
+    return [];
   }
+  const collection = area === "news" ? "news" : "stock";
+  const list = Array.isArray(data[collection]) ? data[collection] : [];
+  const item = list.find((x: any) => x?.id === targetId);
+  if (!item) return []; // unknown id → write nothing
+  item.image = imageRef;
+
+  const files: ResolvedFile[] = [
+    { path: "content/site/data.json", content: JSON.stringify(data, null, 2) + "\n" },
+  ];
   if (imageFile) files.push(imageFile);
   return files;
 }
@@ -207,21 +206,22 @@ function darkenHex(hex: string): string {
 
 async function buildSetThemeFiles(cmd: ApiCommand, image?: UploadedImage): Promise<ResolvedFile[]> {
   const f = cmd.fields;
-  let site: any;
+  // The new design-token layer: content/site/theme.json (read at runtime by
+  // <SiteTheme>), NOT the old amber theme in src/config/site.json.
+  let theme: any = {};
   try {
-    site = JSON.parse(fs.readFileSync(path.join(ROOT, "src/config/site.json"), "utf8"));
+    theme = JSON.parse(fs.readFileSync(path.join(ROOT, "content/site/theme.json"), "utf8"));
   } catch {
-    return [];
+    theme = {};
   }
-  site.theme = site.theme ?? {};
 
   const accent = isHexColor(f.accentColor) ? f.accentColor : isHexColor(f.primaryColor) ? f.primaryColor : undefined;
   if (accent) {
-    site.theme.accent = accent;
-    site.theme.accentStrong = darkenHex(accent);
+    theme.accent = accent;
+    theme.accentStrong = darkenHex(accent);
   }
-  if (isHexColor(f.backgroundColor)) site.theme.background = f.backgroundColor;
-  if (typeof f.fontFamily === "string" && f.fontFamily.trim()) site.theme.font = f.fontFamily.trim();
+  if (isHexColor(f.backgroundColor)) theme.background = f.backgroundColor;
+  if (typeof f.fontFamily === "string" && f.fontFamily.trim()) theme.font = f.fontFamily.trim();
 
   // Logo: uploaded image or fetched URL, committed locally; else fall back to URL.
   const logoUrl = typeof f.logoUrl === "string" ? f.logoUrl : undefined;
@@ -229,15 +229,15 @@ async function buildSetThemeFiles(cmd: ApiCommand, image?: UploadedImage): Promi
   if (image || logoUrl) {
     const src = await resolveSetImageSource(image, logoUrl);
     if (src?.kind === "local") {
-      site.theme.logo = `/images/brand/logo.${src.ext}`;
+      theme.logo = `/images/brand/logo.${src.ext}`;
       logoFile = { path: `public/images/brand/logo.${src.ext}`, content: src.base64, encoding: "base64" };
     } else if (src?.kind === "remote") {
-      site.theme.logo = src.url;
+      theme.logo = src.url;
     }
   }
 
   const files: ResolvedFile[] = [
-    { path: "src/config/site.json", content: JSON.stringify(site, null, 2) + "\n" },
+    { path: "content/site/theme.json", content: JSON.stringify(theme, null, 2) + "\n" },
   ];
   if (logoFile) files.push(logoFile);
   return files;
@@ -292,6 +292,15 @@ function prBody(cmd: ApiCommand): string {
 
 export function analyzeText(text: string, source: "text" | "voice"): ApiCommand {
   return createCommand(text, source);
+}
+
+/** Crude source-language detection for news prose (NL/DE/ES, else EN). */
+function detectInstructionLocale(text: string): string {
+  const t = ` ${text.toLowerCase()} `;
+  if (/\b(voeg|nieuws|bericht|nieuwtje|maak|onze|wijzig|verander|openingstijden|met foto)\b/.test(t)) return "nl";
+  if (/\b(füge|hinzu|nachricht|unser|öffnungszeiten|ändere|erstelle|mit foto)\b/.test(t)) return "de";
+  if (/\b(añade|noticia|nuestro|horario|cambia|crea|con foto)\b/.test(t)) return "es";
+  return "en";
 }
 
 /**
@@ -359,7 +368,7 @@ export async function planCommand(text: string, source: "text" | "voice"): Promi
           delete fields.logo;
         }
 
-        // Robustness for add_news: derive image/source hints from the raw text.
+        // Robustness for add_news: derive image/source/locale hints from the text.
         if (intent === "add_news") {
           if (fields.needsImage == null) {
             fields.needsImage = /foto|afbeelding|image|picture|plaatje/i.test(text);
@@ -368,6 +377,7 @@ export async function planCommand(text: string, source: "text" | "voice"): Promi
             const m = text.match(/https?:\/\/[^\s)<>"']+/i);
             if (m) fields.sourceUrl = m[0];
           }
+          if (!fields.sourceLocale) fields.sourceLocale = detectInstructionLocale(text);
         }
 
         return createCommandFrom(text, source, {

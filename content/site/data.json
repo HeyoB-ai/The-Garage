@@ -23,7 +23,7 @@
     { "id": "car-4", "make": "Mercedes-AMG", "model": "GT C Roadster", "price": 139800, "year": 2019, "mileage": 31200, "fuel": "Petrol", "transmission": "Automatic", "status": "sold", "image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1250" }
   ],
   "news": [
-    { "id": "news-1", "date": "2026-06-12", "image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1200" },
-    { "id": "news-2", "date": "2026-05-04", "image": "https://images.unsplash.com/photo-1611566141151-140a33edadec?auto=format&fit=crop&q=80&w=1200" }
+    { "id": "news-1", "date": "2026-06-12", "image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1200", "sourceLocale": "en" },
+    { "id": "news-2", "date": "2026-05-04", "image": "https://images.unsplash.com/photo-1611566141151-140a33edadec?auto=format&fit=crop&q=80&w=1200", "sourceLocale": "en" }
   ]
 }
