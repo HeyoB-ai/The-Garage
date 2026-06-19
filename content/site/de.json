@@ -1,0 +1,101 @@
+{
+  "sourceLocale": "en",
+  "meta": {
+    "title": "The Garage Jávea — Premium Fahrzeugpflege, Import & Verkauf an der Costa Blanca",
+    "description": "Diskrete, mehrsprachige Spezialisten für High-Performance-Wartung, schlüsselfertigen spanischen Import und kuratierten Verkauf in Jávea."
+  },
+  "nav": { "services": "Leistungen", "stock": "Kollektion", "about": "Handwerk", "news": "Journal", "contact": "Kontakt", "cta": "Besuch buchen" },
+  "hero": {
+    "eyebrow": "Jávea · Costa Blanca",
+    "headline": "Der stille Spezialist für das Auto, das Ihnen am Herzen liegt.",
+    "lead": "Zertifizierte Wartung, schlüsselfertiger Import und durchdachter Verkauf — komplett betreut, in vier Sprachen, von Menschen, die es einfach verstehen.",
+    "ctaPrimary": "Besuch buchen",
+    "ctaSecondary": "Kollektion ansehen"
+  },
+  "services": {
+    "eyebrow": "Was wir tun",
+    "title": "Drei Dinge, richtig gemacht.",
+    "lead": "Kein Verkaufsdruck, kein Theater. Mechanische Präzision und die passenden Papiere.",
+    "items": {
+      "maintenance": { "title": "Wartung & ITV", "body": "Diagnose auf Händlerniveau für Porsche, Ferrari, Aston Martin und AMG. Herstellergarantie erhalten; ITV vorbereitet und bestanden." },
+      "import": { "title": "Import & Export", "body": "Schlüsselfertige spanische Matriculación: Transport, Zoll, technische Datenblätter und Kennzeichen. Von einer britischen oder deutschen Einfahrt nach Jávea." },
+      "sales": { "title": "Verkauf & Beschaffung", "body": "Eine kleine, ehrliche Kollektion — und die Beschaffung bestimmter Fahrzeuge auf Wunsch, mit einer Herkunft, für die wir einstehen." }
+    }
+  },
+  "calc": {
+    "eyebrow": "Import-Rechner",
+    "title": "Schätzen Sie Ihre spanische Zulassungssteuer",
+    "lead": "Eine schnelle Angabe der Impuesto de Matriculación, basierend auf Wert und CO₂.",
+    "valueLabel": "Fahrzeugwert (€)",
+    "co2Label": "CO₂-Ausstoß (g/km)",
+    "button": "Schätzung berechnen",
+    "resultLabel": "Geschätzte Zulassungssteuer",
+    "rateLabel": "Angewandter Satz",
+    "disclaimer": "Nur indikativ. Wir bestätigen den genauen Betrag aus den Hacienda-Tabellen für Ihr Fahrzeug."
+  },
+  "stock": {
+    "eyebrow": "Die Kollektion",
+    "title": "Ein paar Autos, die Fahrt wert.",
+    "lead": "Jedes geprüft, dokumentiert und bereit für spanische Straßen.",
+    "from": "Ab",
+    "status": { "available": "Verfügbar", "reserved": "Reserviert", "sold": "Verkauft" },
+    "cars": {
+      "car-1": { "tagline": "Unauffällig, mit Rennherz", "description": "Ein 992 GT3 Touring in tadellosem Zustand — Saugmotor, PCCB, volle PPF. Importiert und zugelassen, saubere ITV." },
+      "car-2": { "tagline": "Mittelmotor, Investment-Grade", "description": "Ein F8 Tributo mit carbonreicher Ausstattung, authentifiziert aus einer Privatsammlung und auf sauberen spanischen Kennzeichen." },
+      "car-3": { "tagline": "Ein englischer Gentleman mit wilder Seite", "description": "Vantage V8 Roadster in British Racing Green — adaptive Dämpfung, Sportauspuff, schlüsselfertig und ITV-bereit." },
+      "car-4": { "tagline": "Kraft und Präsenz", "description": "AMG GT C Roadster mit Dynamic-Plus-Paket und Burmester-Sound. Importiert und auf grünen Kennzeichen zugelassen." }
+    }
+  },
+  "about": {
+    "eyebrow": "Wer wir sind",
+    "title": "Showroom-Glanz. Werkstatt-Präzision.",
+    "body": [
+      "In der Marina Alta ansässig, verbindet The Garage Jávea niederländische und deutsche Technik mit spanischer Wärme. Ein mehrsprachiges Team, das Ihr Auto — und Ihr Vertrauen — mit Sorgfalt behandelt.",
+      "Wir verzichten auf Verkaufsgerede. Wir protokollieren jeden Service beim Hersteller, dokumentieren jeden Import und halten unser Wort."
+    ],
+    "points": [
+      { "title": "Mehrsprachig, standardmäßig", "body": "Fließend in Niederländisch, Englisch, Deutsch und Spanisch — keine Sprachbarriere, keine Überraschungen." },
+      { "title": "OEM-Diagnose", "body": "Ausrüstung auf Händlerniveau; Garantien vollständig erhalten." },
+      { "title": "Schlüsselfertige Papiere", "body": "Zoll, ITV und DGT-Zulassung — wir koordinieren alles." }
+    ]
+  },
+  "news": {
+    "eyebrow": "Journal",
+    "title": "Aus der Werkstatt.",
+    "readMore": "Lesen",
+    "items": {
+      "news-1": { "title": "Tag der offenen Tür — Sommer 2026", "excerpt": "Ein Nachmittag mit Live-Diagnose, einer kuratierten Schau und kostenloser Import- & ITV-Beratung in Jávea." },
+      "news-2": { "title": "Ein GT2 RS, in sechs Tagen importiert", "excerpt": "Wie wir einen 911 in Weissach-Spezifikation von München nach Jávea zugelassen haben — und 12.000 € Steuer sparten." }
+    }
+  },
+  "hours": {
+    "eyebrow": "Besuch",
+    "title": "Öffnungszeiten",
+    "weekdaysLabel": "Montag – Freitag",
+    "weekendLabel": "Samstag & Sonntag",
+    "appointment": "Nach Vereinbarung",
+    "openNow": "Jetzt geöffnet",
+    "closedNow": "Jetzt geschlossen"
+  },
+  "contact": {
+    "eyebrow": "Kontakt aufnehmen",
+    "title": "Kommen Sie in die Werkstatt.",
+    "lead": "Schauen Sie vorbei, um einen Service, einen Import oder ein Wunschauto zu besprechen. Ein Termin wird geschätzt.",
+    "workshopLabel": "Werkstatt",
+    "callLabel": "Anruf / WhatsApp",
+    "emailLabel": "E-Mail",
+    "directions": "In Maps öffnen"
+  },
+  "advisor": {
+    "open": "Fragen Sie unseren Berater",
+    "title": "KI-Berater",
+    "intro": "Hallo — fragen Sie mich zu spanischer Importsteuer, Beschaffung, Transport oder Terminbuchung.",
+    "placeholder": "Wie importiere ich aus dem UK?",
+    "error": "Kurze Verbindungsstörung. Bitte rufen Sie uns an: +34 965 020 442."
+  },
+  "footer": {
+    "tagline": "Zertifizierte Wartung · schlüsselfertiger Import · kuratierter Verkauf.",
+    "rights": "Alle Rechte vorbehalten."
+  },
+  "lang": { "nl": "Nederlands", "en": "English", "de": "Deutsch", "es": "Español" }
+}

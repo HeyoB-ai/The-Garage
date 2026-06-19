@@ -1,0 +1,101 @@
+{
+  "sourceLocale": "en",
+  "meta": {
+    "title": "The Garage Jávea — Premium auto-onderhoud, import & verkoop aan de Costa Blanca",
+    "description": "Discrete, meertalige specialisten voor high-performance onderhoud, turnkey Spaanse import en zorgvuldige verkoop in Jávea."
+  },
+  "nav": { "services": "Diensten", "stock": "Collectie", "about": "Vakmanschap", "news": "Journaal", "contact": "Contact", "cta": "Plan een bezoek" },
+  "hero": {
+    "eyebrow": "Jávea · Costa Blanca",
+    "headline": "De stille specialist voor de auto waar u om geeft.",
+    "lead": "Gecertificeerd onderhoud, turnkey import en doordachte verkoop — van begin tot eind geregeld, in vier talen, door mensen die het simpelweg snappen.",
+    "ctaPrimary": "Plan een bezoek",
+    "ctaSecondary": "Bekijk de collectie"
+  },
+  "services": {
+    "eyebrow": "Wat we doen",
+    "title": "Drie dingen, goed gedaan.",
+    "lead": "Geen verkooppraat, geen theater. Mechanische precisie én de bijbehorende papieren.",
+    "items": {
+      "maintenance": { "title": "Onderhoud & ITV", "body": "Dealer-diagnose voor Porsche, Ferrari, Aston Martin en AMG. Fabrieksgarantie behouden; ITV voorbereid en gehaald." },
+      "import": { "title": "Import & Export", "body": "Turnkey Spaanse matriculación: transport, douane, technische fiches en kentekens. Van een Britse of Duitse oprit naar die in Jávea." },
+      "sales": { "title": "Verkoop & Sourcing", "body": "Een kleine, eerlijke collectie — en het zoeken van specifieke auto's op aanvraag, met een herkomst waar u achter staat." }
+    }
+  },
+  "calc": {
+    "eyebrow": "Import-calculator",
+    "title": "Schat uw Spaanse registratiebelasting",
+    "lead": "Een snelle indicatie van de Impuesto de Matriculación, op basis van waarde en CO₂.",
+    "valueLabel": "Voertuigwaarde (€)",
+    "co2Label": "CO₂-uitstoot (g/km)",
+    "button": "Bereken schatting",
+    "resultLabel": "Geschatte registratiebelasting",
+    "rateLabel": "Toegepast tarief",
+    "disclaimer": "Alleen indicatief. We bevestigen het exacte bedrag uit de Hacienda-tabellen voor uw voertuig."
+  },
+  "stock": {
+    "eyebrow": "De collectie",
+    "title": "Een paar auto's de rit waard.",
+    "lead": "Elk gecontroleerd, gedocumenteerd en klaar voor de Spaanse wegen.",
+    "from": "Vanaf",
+    "status": { "available": "Beschikbaar", "reserved": "Gereserveerd", "sold": "Verkocht" },
+    "cars": {
+      "car-1": { "tagline": "Ingetogen, met een racehart", "description": "Een 992 GT3 Touring in onberispelijke staat — atmosferisch, PCCB, volledige PPF. Geïmporteerd en geregistreerd, schone ITV." },
+      "car-2": { "tagline": "Middenmotor, investeringswaardig", "description": "Een F8 Tributo met een carbonrijke uitvoering, geauthenticeerd uit een privécollectie en op schone Spaanse kentekens." },
+      "car-3": { "tagline": "Een Engelse gentleman met een wilde kant", "description": "Vantage V8 Roadster in British Racing Green — adaptieve demping, sportuitlaat, turnkey en ITV-klaar." },
+      "car-4": { "tagline": "Spierkracht en présence", "description": "AMG GT C Roadster met het Dynamic Plus-pakket en Burmester-geluid. Geïmporteerd en geregistreerd op groene platen." }
+    }
+  },
+  "about": {
+    "eyebrow": "Wie we zijn",
+    "title": "Showroom-glans. Werkplaats-precisie.",
+    "body": [
+      "Gevestigd in de Marina Alta combineert The Garage Jávea Nederlandse en Duitse techniek met Spaanse warmte. Een meertalig team dat uw auto — en uw vertrouwen — met zorg behandelt.",
+      "We slaan de verkooppraat over. We loggen elke beurt bij de fabrikant, documenteren elke import en houden ons woord."
+    ],
+    "points": [
+      { "title": "Meertalig, standaard", "body": "Vloeiend in Nederlands, Engels, Duits en Spaans — geen taalbarrière, geen verrassingen." },
+      { "title": "OEM-diagnose", "body": "Dealer-apparatuur; garanties volledig intact." },
+      { "title": "Turnkey papierwerk", "body": "Douane, ITV en DGT-registratie — wij coördineren alles." }
+    ]
+  },
+  "news": {
+    "eyebrow": "Journaal",
+    "title": "Uit de werkplaats.",
+    "readMore": "Lezen",
+    "items": {
+      "news-1": { "title": "Open dag — zomer 2026", "excerpt": "Een middag met live diagnose, een gecureerde showcase en gratis import- & ITV-advies in Jávea." },
+      "news-2": { "title": "Een GT2 RS, in zes dagen geïmporteerd", "excerpt": "Hoe we een Weissach-spec 911 van München naar Jávea matriculeerden — en €12.000 belasting bespaarden." }
+    }
+  },
+  "hours": {
+    "eyebrow": "Bezoek",
+    "title": "Openingstijden",
+    "weekdaysLabel": "Maandag – Vrijdag",
+    "weekendLabel": "Zaterdag & Zondag",
+    "appointment": "Op afspraak",
+    "openNow": "Nu open",
+    "closedNow": "Nu gesloten"
+  },
+  "contact": {
+    "eyebrow": "Neem contact op",
+    "title": "Kom langs bij de werkplaats.",
+    "lead": "Loop binnen om een beurt, een import of een auto in gedachten te bespreken. Een afspraak wordt gewaardeerd.",
+    "workshopLabel": "Werkplaats",
+    "callLabel": "Bel / WhatsApp",
+    "emailLabel": "E-mail",
+    "directions": "Open in Maps"
+  },
+  "advisor": {
+    "open": "Vraag onze adviseur",
+    "title": "AI-adviseur",
+    "intro": "Hallo — vraag me over Spaanse importbelasting, sourcing, transport of het inplannen van een beurt.",
+    "placeholder": "Hoe importeer ik vanuit het VK?",
+    "error": "We hebben een korte verbindingsstoring. Bel ons gerust op +34 965 020 442."
+  },
+  "footer": {
+    "tagline": "Gecertificeerd onderhoud · turnkey import · zorgvuldige verkoop.",
+    "rights": "Alle rechten voorbehouden."
+  },
+  "lang": { "nl": "Nederlands", "en": "English", "de": "Deutsch", "es": "Español" }
+}

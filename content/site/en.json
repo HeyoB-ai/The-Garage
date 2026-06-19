@@ -1,0 +1,101 @@
+{
+  "sourceLocale": "en",
+  "meta": {
+    "title": "The Garage Jávea — Premium car care, import & sales on the Costa Blanca",
+    "description": "Discreet, multilingual specialists for high-performance maintenance, turnkey Spanish import and curated sales in Jávea."
+  },
+  "nav": { "services": "Services", "stock": "Collection", "about": "Craft", "news": "Journal", "contact": "Contact", "cta": "Book a visit" },
+  "hero": {
+    "eyebrow": "Jávea · Costa Blanca",
+    "headline": "The quiet specialist for the car you care about.",
+    "lead": "Certified maintenance, turnkey import and considered sales — handled end to end, in four languages, by people who simply get it.",
+    "ctaPrimary": "Book a visit",
+    "ctaSecondary": "See the collection"
+  },
+  "services": {
+    "eyebrow": "What we do",
+    "title": "Three things, done properly.",
+    "lead": "No upsell, no theatre. Mechanical precision and the paperwork to match.",
+    "items": {
+      "maintenance": { "title": "Maintenance & ITV", "body": "Dealer-level diagnostics for Porsche, Ferrari, Aston Martin and AMG. Manufacturer warranty preserved; ITV prepared and passed." },
+      "import": { "title": "Import & Export", "body": "Turnkey Spanish matriculación: transport, customs, technical sheets and plates. From a UK or German driveway to a Jávea one." },
+      "sales": { "title": "Sales & Sourcing", "body": "A small, honest collection — and sourcing of specific cars to order, with provenance you can stand behind." }
+    }
+  },
+  "calc": {
+    "eyebrow": "Import calculator",
+    "title": "Estimate your Spanish registration tax",
+    "lead": "A fast indication of the Impuesto de Matriculación, based on value and CO₂.",
+    "valueLabel": "Vehicle value (€)",
+    "co2Label": "CO₂ emissions (g/km)",
+    "button": "Calculate estimate",
+    "resultLabel": "Estimated registration tax",
+    "rateLabel": "Applied rate",
+    "disclaimer": "Indicative only. We confirm the exact figure from the Hacienda tables for your vehicle."
+  },
+  "stock": {
+    "eyebrow": "The collection",
+    "title": "A few cars worth the drive.",
+    "lead": "Each one checked, documented and ready for Spanish roads.",
+    "from": "From",
+    "status": { "available": "Available", "reserved": "Reserved", "sold": "Sold" },
+    "cars": {
+      "car-1": { "tagline": "Stealth, with a racing heart", "description": "A 992 GT3 Touring in flawless order — naturally aspirated, PCCB, full PPF. Imported and registered, clean ITV." },
+      "car-2": { "tagline": "Mid-engine, investment grade", "description": "An F8 Tributo with a carbon-heavy build sheet, authenticated from a private collection and on clean Spanish plates." },
+      "car-3": { "tagline": "An English gentleman with a wild side", "description": "Vantage V8 Roadster in British Racing Green — adaptive damping, sport exhaust, turnkey and ITV-ready." },
+      "car-4": { "tagline": "Muscle and presence", "description": "AMG GT C Roadster with the Dynamic Plus package and Burmester sound. Imported and registered on green plates." }
+    }
+  },
+  "about": {
+    "eyebrow": "Who we are",
+    "title": "Showroom polish. Workshop precision.",
+    "body": [
+      "Based in the Marina Alta, The Garage Jávea pairs Dutch and German technical rigour with Spanish warmth. A multilingual team that treats your car — and your trust — with care.",
+      "We skip the sales pitch. We log every service to the manufacturer, document every import, and keep our word."
+    ],
+    "points": [
+      { "title": "Multilingual, by default", "body": "Fluent in Dutch, English, German and Spanish — no language barrier, no surprises." },
+      { "title": "OEM-level diagnostics", "body": "Dealer-grade equipment; warranties kept fully intact." },
+      { "title": "Turnkey paperwork", "body": "Customs, ITV and DGT registration — we coordinate all of it." }
+    ]
+  },
+  "news": {
+    "eyebrow": "Journal",
+    "title": "From the workshop.",
+    "readMore": "Read",
+    "items": {
+      "news-1": { "title": "Open day — summer 2026", "excerpt": "An afternoon of live diagnostics, a curated showcase and free import & ITV advice in Jávea." },
+      "news-2": { "title": "A GT2 RS, imported in six days", "excerpt": "How we matriculated a Weissach-spec 911 from Munich to Jávea — and saved €12,000 in tax." }
+    }
+  },
+  "hours": {
+    "eyebrow": "Visit",
+    "title": "Opening hours",
+    "weekdaysLabel": "Monday – Friday",
+    "weekendLabel": "Saturday & Sunday",
+    "appointment": "By appointment",
+    "openNow": "Open now",
+    "closedNow": "Closed now"
+  },
+  "contact": {
+    "eyebrow": "Get in touch",
+    "title": "Come by the workshop.",
+    "lead": "Stop in to talk through a service, an import or a car you have in mind. An appointment is appreciated.",
+    "workshopLabel": "Workshop",
+    "callLabel": "Call / WhatsApp",
+    "emailLabel": "Email",
+    "directions": "Open in Maps"
+  },
+  "advisor": {
+    "open": "Ask our advisor",
+    "title": "AI Advisor",
+    "intro": "Hello — ask me about Spanish import taxes, sourcing, transport or booking a service.",
+    "placeholder": "How do I import from the UK?",
+    "error": "We're having a brief connection issue. Please call us at +34 965 020 442."
+  },
+  "footer": {
+    "tagline": "Certified maintenance · turnkey import · curated sales.",
+    "rights": "All rights reserved."
+  },
+  "lang": { "nl": "Nederlands", "en": "English", "de": "Deutsch", "es": "Español" }
+}

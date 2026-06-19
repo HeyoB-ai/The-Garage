@@ -1,0 +1,101 @@
+{
+  "sourceLocale": "en",
+  "meta": {
+    "title": "The Garage Jávea — Mantenimiento premium, importación y venta en la Costa Blanca",
+    "description": "Especialistas discretos y multilingües en mantenimiento de alto rendimiento, importación española llave en mano y venta cuidada en Jávea."
+  },
+  "nav": { "services": "Servicios", "stock": "Colección", "about": "Oficio", "news": "Diario", "contact": "Contacto", "cta": "Reservar visita" },
+  "hero": {
+    "eyebrow": "Jávea · Costa Blanca",
+    "headline": "El especialista discreto para el coche que le importa.",
+    "lead": "Mantenimiento certificado, importación llave en mano y venta meditada — gestionado de principio a fin, en cuatro idiomas, por gente que sencillamente lo entiende.",
+    "ctaPrimary": "Reservar visita",
+    "ctaSecondary": "Ver la colección"
+  },
+  "services": {
+    "eyebrow": "Qué hacemos",
+    "title": "Tres cosas, bien hechas.",
+    "lead": "Sin venta forzada, sin teatro. Precisión mecánica y el papeleo que la acompaña.",
+    "items": {
+      "maintenance": { "title": "Mantenimiento e ITV", "body": "Diagnóstico de nivel concesionario para Porsche, Ferrari, Aston Martin y AMG. Garantía de fábrica preservada; ITV preparada y superada." },
+      "import": { "title": "Importación y Exportación", "body": "Matriculación española llave en mano: transporte, aduanas, fichas técnicas y placas. De una entrada británica o alemana a una de Jávea." },
+      "sales": { "title": "Venta y Búsqueda", "body": "Una colección pequeña y honesta — y la búsqueda de coches concretos por encargo, con una procedencia que respaldamos." }
+    }
+  },
+  "calc": {
+    "eyebrow": "Calculadora de importación",
+    "title": "Estime su impuesto de matriculación",
+    "lead": "Una indicación rápida del Impuesto de Matriculación, según valor y CO₂.",
+    "valueLabel": "Valor del vehículo (€)",
+    "co2Label": "Emisiones CO₂ (g/km)",
+    "button": "Calcular estimación",
+    "resultLabel": "Impuesto de matriculación estimado",
+    "rateLabel": "Tipo aplicado",
+    "disclaimer": "Solo indicativo. Confirmamos la cifra exacta de las tablas de Hacienda para su vehículo."
+  },
+  "stock": {
+    "eyebrow": "La colección",
+    "title": "Unos coches que merecen el viaje.",
+    "lead": "Cada uno revisado, documentado y listo para las carreteras españolas.",
+    "from": "Desde",
+    "status": { "available": "Disponible", "reserved": "Reservado", "sold": "Vendido" },
+    "cars": {
+      "car-1": { "tagline": "Discreción, con corazón de carreras", "description": "Un 992 GT3 Touring en estado impecable — atmosférico, PCCB, PPF completo. Importado y matriculado, ITV limpia." },
+      "car-2": { "tagline": "Motor central, grado inversión", "description": "Un F8 Tributo con ficha rica en carbono, autenticado de una colección privada y con placas españolas limpias." },
+      "car-3": { "tagline": "Un caballero inglés con un lado salvaje", "description": "Vantage V8 Roadster en British Racing Green — amortiguación adaptativa, escape deportivo, llave en mano y listo para ITV." },
+      "car-4": { "tagline": "Músculo y presencia", "description": "AMG GT C Roadster con el paquete Dynamic Plus y sonido Burmester. Importado y matriculado con placas verdes." }
+    }
+  },
+  "about": {
+    "eyebrow": "Quiénes somos",
+    "title": "Brillo de showroom. Precisión de taller.",
+    "body": [
+      "Con sede en la Marina Alta, The Garage Jávea une el rigor técnico neerlandés y alemán con la calidez española. Un equipo multilingüe que trata su coche — y su confianza — con cuidado.",
+      "Nos saltamos el discurso de venta. Registramos cada servicio ante el fabricante, documentamos cada importación y cumplimos nuestra palabra."
+    ],
+    "points": [
+      { "title": "Multilingüe, por defecto", "body": "Fluidez en neerlandés, inglés, alemán y español — sin barrera de idioma, sin sorpresas." },
+      { "title": "Diagnóstico OEM", "body": "Equipos de nivel concesionario; garantías totalmente intactas." },
+      { "title": "Papeleo llave en mano", "body": "Aduanas, ITV y matriculación en la DGT — lo coordinamos todo." }
+    ]
+  },
+  "news": {
+    "eyebrow": "Diario",
+    "title": "Desde el taller.",
+    "readMore": "Leer",
+    "items": {
+      "news-1": { "title": "Jornada de puertas abiertas — verano 2026", "excerpt": "Una tarde de diagnóstico en vivo, una muestra cuidada y asesoramiento gratuito de importación e ITV en Jávea." },
+      "news-2": { "title": "Un GT2 RS, importado en seis días", "excerpt": "Cómo matriculamos un 911 en especificación Weissach de Múnich a Jávea — y ahorramos 12.000 € en impuestos." }
+    }
+  },
+  "hours": {
+    "eyebrow": "Visita",
+    "title": "Horario",
+    "weekdaysLabel": "Lunes – Viernes",
+    "weekendLabel": "Sábado y Domingo",
+    "appointment": "Con cita previa",
+    "openNow": "Abierto ahora",
+    "closedNow": "Cerrado ahora"
+  },
+  "contact": {
+    "eyebrow": "Contacto",
+    "title": "Pásese por el taller.",
+    "lead": "Venga a comentar un servicio, una importación o un coche que tenga en mente. Se agradece cita previa.",
+    "workshopLabel": "Taller",
+    "callLabel": "Llamar / WhatsApp",
+    "emailLabel": "Correo",
+    "directions": "Abrir en Maps"
+  },
+  "advisor": {
+    "open": "Pregunte a nuestro asesor",
+    "title": "Asesor IA",
+    "intro": "Hola — pregúnteme sobre impuestos de importación, búsqueda de coches, transporte o reservar un servicio.",
+    "placeholder": "¿Cómo importo desde el Reino Unido?",
+    "error": "Tenemos una breve incidencia de conexión. Llámenos al +34 965 020 442."
+  },
+  "footer": {
+    "tagline": "Mantenimiento certificado · importación llave en mano · venta cuidada.",
+    "rights": "Todos los derechos reservados."
+  },
+  "lang": { "nl": "Nederlands", "en": "English", "de": "Deutsch", "es": "Español" }
+}

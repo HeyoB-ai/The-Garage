@@ -1,7 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600;6..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-/* Brand token layer: the site styles itself with Tailwind colour utilities,
-   which v4 emits as CSS variables (--color-amber-*, --color-neutral-950) plus
-   --font-sans. Their values are driven by src/config/site.json "theme" and
-   applied at runtime by <ThemeStyle>, and are editable via the AI-CMS
-   set_theme operation. */
+/* ------------------------------------------------------------------ *
+ * The Garage Jávea — brand token layer (DESIGN.md §2–§5).
+ * Limestone + Mediterranean blue. All theme values are tokens so the
+ * look changes in one place. Tailwind v4 exposes these as utilities
+ * (bg-bg, text-ink, text-accent, font-display, font-mono, …).
+ * ------------------------------------------------------------------ */
+@theme {
+  --font-display: "Bodoni Moda", Georgia, serif;
+  --font-sans: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-bg: #f5f2ec;          /* limestone */
+  --color-surface: #fbfaf6;     /* raised / cards */
+  --color-ink: #1a1e24;         /* headings / primary */
+  --color-ink-soft: #4a515b;    /* body / secondary */
+  --color-line: #e4ded2;        /* hairline borders */
+  --color-accent: #154a6b;      /* Mediterranean blue */
+  --color-accent-hover: #1c5c84;
+  --color-accent-ink: #f5f2ec;  /* text on accent */
+  --color-sand: #b98c56;        /* warm metal, sparing */
+
+  /* fluid display sizes */
+  --text-display: clamp(2.75rem, 6vw, 5.5rem);
+  --text-display-sm: clamp(2rem, 4vw, 3.25rem);
+}
+
+/* Base */
+html { scroll-behavior: smooth; }
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: var(--color-accent); color: var(--color-accent-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
