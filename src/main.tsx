@@ -5,13 +5,10 @@ import { LocalizedSite, SiteRedirect } from './site/SiteRoot.tsx';
 import NewsOverviewPage from './pages/NewsOverviewPage.tsx';
 import NewsDetailPage from './pages/NewsDetailPage.tsx';
 import DashboardPage from './pages/DashboardPage.tsx';
-import ThemeStyle from './components/ThemeStyle.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* ThemeStyle drives the legacy CMS dashboard's amber tokens (kept). */}
-    <ThemeStyle />
     <BrowserRouter>
       <Routes>
         {/* New public site — localized */}

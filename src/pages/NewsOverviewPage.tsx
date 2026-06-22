@@ -2,50 +2,42 @@ import { Newspaper } from "lucide-react";
 import PageShell from "../components/layout/PageShell";
 import Seo from "../components/Seo";
 import NewsCard from "../components/news/NewsCard";
-import { getAllNews } from "../lib/content";
+import { resolveNews } from "../site/content";
 
 export default function NewsOverviewPage() {
-  const articles = getAllNews();
+  const articles = resolveNews();
 
   return (
     <PageShell>
-      <Seo
-        title="Nieuws"
-        description="Latest news, events and updates from The Garage Jávea."
-      />
+      <Seo title="Nieuws" description="Latest news, events and updates from The Garage Jávea." />
 
-      {/* Header */}
-      <section className="py-16 sm:py-20 border-b border-neutral-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-neutral-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <span className="inline-flex items-center gap-2 text-amber-500 uppercase tracking-widest font-mono text-xs mb-4">
-            <Newspaper className="w-4 h-4" /> News &amp; Updates
+      <section className="border-b border-line py-16 sm:py-20">
+        <div className="mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-12">
+          <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
+            <Newspaper className="h-4 w-4" /> Journal
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
-            Nieuws
-          </h1>
-          <div className="h-1 w-20 bg-amber-500 mb-6" />
-          <p className="text-neutral-400 max-w-2xl">
+          <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.01em] text-ink sm:text-5xl">Nieuws</h1>
+          <div className="mt-5 h-px w-20 bg-accent" />
+          <p className="mt-5 max-w-2xl text-ink-soft">
             Events, announcements and stories from our workshop and showroom on the Costa Blanca.
           </p>
         </div>
       </section>
 
-      {/* Grid / fallback */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-12">
           {articles.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-neutral-800 rounded-xl bg-neutral-900/40">
-              <Newspaper className="w-10 h-10 text-neutral-700 mx-auto mb-4" />
-              <h2 className="text-lg font-bold text-white mb-2">No news yet</h2>
-              <p className="text-sm text-neutral-500 max-w-md mx-auto">
-                There are no published articles at the moment. Check back soon for the
-                latest updates from The Garage Jávea.
+            <div className="rounded-[2px] border border-dashed border-line bg-surface py-20 text-center">
+              <Newspaper className="mx-auto mb-4 h-10 w-10 text-line" />
+              <h2 className="font-display text-lg font-medium text-ink">No news yet</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
+                There are no articles at the moment. Check back soon.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
               {articles.map((article) => (
-                <NewsCard key={article.slug} article={article} />
+                <NewsCard key={article.id} article={article} />
               ))}
             </div>
           )}
