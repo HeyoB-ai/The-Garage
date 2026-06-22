@@ -49,3 +49,28 @@ export function formatPrice(value: number, locale: Locale): string {
   const map: Record<Locale, string> = { nl: "nl-NL", en: "en-GB", de: "de-DE", es: "es-ES" };
   return new Intl.NumberFormat(map[locale], { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
 }
+
+export interface ResolvedNews {
+  id: string;
+  date: string;
+  image: string;
+  title: string;
+  excerpt: string;
+}
+
+/** News records joined with prose for `locale`, falling back to the source language. */
+export function resolveNews(locale: Locale = defaultLocale): ResolvedNews[] {
+  const active = getProse(locale).news.items as Record<string, { title: string; excerpt: string }>;
+  return siteData.news.map((n) => {
+    const src = isLocale((n as { sourceLocale?: string }).sourceLocale)
+      ? ((n as { sourceLocale?: string }).sourceLocale as Locale)
+      : defaultLocale;
+    const fallback = getProse(src).news.items as Record<string, { title: string; excerpt: string }>;
+    const prose = active[n.id] ?? fallback[n.id] ?? { title: n.id, excerpt: "" };
+    return { id: n.id, date: n.date, image: n.image, title: prose.title, excerpt: prose.excerpt };
+  });
+}
+
+export function getNewsById(id: string, locale: Locale = defaultLocale): ResolvedNews | undefined {
+  return resolveNews(locale).find((n) => n.id === id);
+}
